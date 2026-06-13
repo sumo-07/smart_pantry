@@ -57,22 +57,41 @@ export default function Dashboard({
               hour: "2-digit",
               minute: "2-digit"
             });
-            let scanTitle = "Initial Scan";
-            if (scan.scanType !== "baseline" && scans[0]) {
-              const diffMs = new Date(scan.timestamp) - new Date(scans[0].timestamp);
-              const diffSec = Math.floor(diffMs / 1000);
-              const diffMin = Math.floor(diffSec / 60);
-              const diffHour = Math.floor(diffMin / 60);
-              const diffDay = (diffMs / (1000 * 60 * 60 * 24)).toFixed(1);
+            let scanTitle = idx === 0 ? "Initial Scan" : "Pantry Restocked";
+            if (scan.scanType !== "baseline") {
+              // Find the closest preceding baseline scan to compute the accurate time difference
+              let baselineScan = null;
+              for (let i = idx - 1; i >= 0; i--) {
+                if (scans[i].scanType === "baseline") {
+                  baselineScan = scans[i];
+                  break;
+                }
+              }
 
-              if (diffSec < 60) {
-                scanTitle = "Just after restock";
-              } else if (diffMin < 60) {
-                scanTitle = `${diffMin} min${diffMin > 1 ? "s" : ""} later`;
-              } else if (diffHour < 24) {
-                scanTitle = `${diffHour} hour${diffHour > 1 ? "s" : ""} later`;
+              if (baselineScan) {
+                // Clear seconds and milliseconds to align with displayed clock minutes
+                const tCurr = new Date(scan.timestamp);
+                tCurr.setSeconds(0, 0);
+                const tBase = new Date(baselineScan.timestamp);
+                tBase.setSeconds(0, 0);
+
+                const diffMs = tCurr - tBase;
+                const diffSec = Math.floor(diffMs / 1000);
+                const diffMin = Math.floor(diffSec / 60);
+                const diffHour = Math.floor(diffMin / 60);
+                const diffDay = (diffMs / (1000 * 60 * 60 * 24)).toFixed(1);
+
+                if (diffSec < 60) {
+                  scanTitle = "Just after restock";
+                } else if (diffMin < 60) {
+                  scanTitle = `${diffMin} min${diffMin > 1 ? "s" : ""} later`;
+                } else if (diffHour < 24) {
+                  scanTitle = `${diffHour} hour${diffHour > 1 ? "s" : ""} later`;
+                } else {
+                  scanTitle = `${diffDay} day${Number(diffDay) > 1 ? "s" : ""} later`;
+                }
               } else {
-                scanTitle = `${diffDay} day${Number(diffDay) > 1 ? "s" : ""} later`;
+                scanTitle = "Subsequent Scan";
               }
             }
 
