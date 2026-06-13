@@ -39,27 +39,30 @@ export default function ShoppingListCard({ items = [], onToggleItem, onAddItem }
       </div>
 
       {/* Add Item Inline Form */}
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           placeholder="Add custom item..."
           value={newItemName}
           onChange={(e) => setNewItemName(e.target.value)}
-          className="flex-1 bg-white/5 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
+          className="flex-1 bg-white/5 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition w-full"
         />
-        <input
-          type="number"
-          min="1"
-          value={newItemQty}
-          onChange={(e) => setNewItemQty(e.target.value)}
-          className="w-16 bg-white/5 border border-gray-700 rounded-xl px-2 py-2 text-sm text-center text-white focus:outline-none focus:border-indigo-500 transition"
-        />
-        <button
-          type="submit"
-          className="p-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition shadow-lg shadow-indigo-500/20"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <input
+            type="number"
+            min="1"
+            value={newItemQty}
+            onChange={(e) => setNewItemQty(e.target.value)}
+            className="w-20 bg-white/5 border border-gray-700 rounded-xl px-2 py-2.5 text-sm text-center text-white focus:outline-none focus:border-indigo-500 transition"
+          />
+          <button
+            type="submit"
+            className="flex-1 sm:flex-none p-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition shadow-lg shadow-indigo-500/20 flex items-center justify-center cursor-pointer min-h-[42px]"
+          >
+            <Plus className="h-4 w-4 mr-1.5 sm:mr-0" />
+            <span className="sm:hidden text-sm font-semibold">Add Item</span>
+          </button>
+        </div>
       </form>
 
       {/* Items Checklist */}

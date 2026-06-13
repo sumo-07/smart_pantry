@@ -7,7 +7,7 @@ export default function StatCard({ title, value, icon: Icon, description, trend,
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      className="glass-panel glass-panel-hover rounded-3xl p-6 relative overflow-hidden"
+      className="glass-panel glass-panel-hover rounded-3xl p-5 sm:p-6 relative overflow-hidden"
     >
       {/* Glow Effect */}
       <div className="absolute top-0 right-0 -mr-6 -mt-6 h-24 w-24 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />

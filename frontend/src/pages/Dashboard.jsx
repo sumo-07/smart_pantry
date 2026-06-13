@@ -82,7 +82,7 @@ export default function Dashboard({
                 <div className="absolute -left-[35px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-dark border-2 border-indigo-500" />
                 
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <span className="text-sm font-bold text-white">{scanTitle}</span>
                     <span className="text-xs text-gray-500 font-medium">{scanDate}</span>
                   </div>
@@ -142,7 +142,7 @@ export default function Dashboard({
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard 
           title="Items Tracked" 
           value={itemsTrackedCount} 

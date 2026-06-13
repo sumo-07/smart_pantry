@@ -98,7 +98,7 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
         {!previewUrl ? (
           <label
             htmlFor="pantry-image-upload"
-            className={`flex flex-col items-center justify-center h-56 border border-dashed rounded-2xl cursor-pointer transition ${
+            className={`flex flex-col items-center justify-center h-48 sm:h-56 border border-dashed rounded-2xl cursor-pointer transition ${
               dragActive 
                 ? "border-indigo-500 bg-indigo-500/5" 
                 : "border-gray-700 hover:border-gray-600 bg-white/5"
@@ -117,7 +117,7 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
             </div>
           </label>
         ) : (
-          <div className="relative h-56 rounded-2xl overflow-hidden border border-gray-700 bg-black/20 flex items-center justify-center">
+          <div className="relative h-48 sm:h-56 rounded-2xl overflow-hidden border border-gray-700 bg-black/20 flex items-center justify-center">
             <img 
               src={previewUrl} 
               alt="Pantry Preview" 
@@ -139,7 +139,7 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
           <button
             type="submit"
             disabled={!selectedFile || isLoading}
-            className="flex-1 glow-btn inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 glow-btn inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
           >
             {isLoading ? (
               <>
