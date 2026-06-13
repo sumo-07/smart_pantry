@@ -39,16 +39,16 @@ export default function InventoryTable({ items }) {
         </div>
       </div>
       
-      <div className="overflow-x-auto">
+      <div className="max-h-[360px] overflow-y-auto overflow-x-auto relative">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-brand-border bg-white/2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-              <th className="px-6 py-4">Item</th>
-              <th className="px-6 py-4 text-center">Current Qty</th>
-              <th className="px-6 py-4 text-center">Consumed</th>
-              <th className="px-6 py-4 text-center">Daily Rate</th>
-              <th className="px-6 py-4 text-center">Days Left</th>
-              <th className="px-6 py-4 text-right">Status</th>
+            <tr className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 border-b border-brand-border">Item</th>
+              <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 text-center border-b border-brand-border">Current Qty</th>
+              <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 text-center border-b border-brand-border">Consumed</th>
+              <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 text-center border-b border-brand-border">Daily Rate</th>
+              <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 text-center border-b border-brand-border">Days Left</th>
+              <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 text-right border-b border-brand-border">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-border">
