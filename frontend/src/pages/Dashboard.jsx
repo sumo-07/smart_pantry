@@ -175,10 +175,10 @@ export default function Dashboard({
       </div>
 
       {/* Main dashboard contents */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 layout-split:grid-cols-12 gap-6 items-start">
         
         {/* Timeline (Left/Right) */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="layout-split:col-span-4 space-y-6">
           {renderTimeline()}
           
           {scans.length < 2 && (
@@ -198,7 +198,7 @@ export default function Dashboard({
         </div>
 
         {/* Table & Comparisons */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="layout-split:col-span-8 space-y-6">
           {predictions.length > 0 ? (
             <InventoryTable items={predictions} />
           ) : (

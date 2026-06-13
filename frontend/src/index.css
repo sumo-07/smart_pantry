@@ -15,6 +15,9 @@
 
   --font-sans: 'Inter', 'Outfit', sans-serif;
 
+  --breakpoint-layout-split: 1200px;
+  --breakpoint-table-split: 1395px;
+
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-float: float 6s ease-in-out infinite;
 

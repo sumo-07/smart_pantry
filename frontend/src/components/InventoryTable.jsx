@@ -40,7 +40,8 @@ export default function InventoryTable({ items }) {
       </div>
       
       <div className="max-h-[360px] overflow-y-auto overflow-x-auto relative">
-        <table className="w-full text-left border-collapse">
+        {/* Desktop View Table */}
+        <table className="hidden table-split:table w-full text-left border-collapse">
           <thead>
             <tr className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
               <th className="sticky top-0 bg-[#111827] z-10 px-6 py-4 border-b border-brand-border">Item</th>
@@ -72,9 +73,9 @@ export default function InventoryTable({ items }) {
                 <td className="px-6 py-4 text-sm text-center">
                   <span className={`font-semibold ${
                     item.daysLeft === 0 || item.daysLeft === "0"
-                      ? "text-rose-400"
+                      ? "text-rose-450"
                       : item.daysLeft <= 3 
-                      ? "text-amber-400"
+                      ? "text-amber-450"
                       : "text-gray-300"
                   }`}>
                     {item.daysLeft === "N/A" || item.daysLeft === Infinity 
@@ -91,6 +92,48 @@ export default function InventoryTable({ items }) {
             ))}
           </tbody>
         </table>
+
+        {/* Mobile View Card List */}
+        <div className="table-split:hidden divide-y divide-brand-border">
+          {items.map((item) => (
+            <div key={item.name} className="p-4 space-y-3 hover:bg-white/1 transition duration-150">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-white">{item.name}</span>
+                {getStatusBadge(item.status)}
+              </div>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
+                <div>
+                  <span className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Current Qty</span>
+                  <span className="text-sm font-medium text-gray-200">{item.currentQuantity}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Consumed</span>
+                  <span className="text-sm font-medium text-gray-400">{item.consumed !== undefined ? item.consumed : "-"}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Daily Rate</span>
+                  <span className="text-sm font-semibold text-indigo-400">{item.dailyRate !== undefined ? `${item.dailyRate}/day` : "-"}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Days Left</span>
+                  <span className={`text-sm font-bold ${
+                    item.daysLeft === 0 || item.daysLeft === "0"
+                      ? "text-rose-400"
+                      : item.daysLeft <= 3 
+                      ? "text-amber-450"
+                      : "text-gray-300"
+                  }`}>
+                    {item.daysLeft === "N/A" || item.daysLeft === Infinity 
+                      ? "∞" 
+                      : item.daysLeft === 0 
+                      ? "Out of stock" 
+                      : `${item.daysLeft} days`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
