@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Users, Camera, ArrowRight, Sparkles, CheckCircle2, ChevronRight, Info, AlertTriangle } from "lucide-react";
 import UploadCard from "../components/UploadCard";
 import { motion } from "framer-motion";
@@ -15,6 +16,7 @@ export default function ScanUpload({
   const [scanResult, setScanResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
 
   const handleFamilySizeSubmit = async (e) => {
     e.preventDefault();
@@ -35,6 +37,7 @@ export default function ScanUpload({
       // Send image to backend
       const result = await onScanImage(file, scanType);
       setScanResult(result);
+      setShowPopup(true);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || "Failed to analyze image. Please try again.");
@@ -246,6 +249,43 @@ export default function ScanUpload({
             )}
           </div>
 
+        </div>
+      )}
+
+      {showPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel rounded-3xl p-8 max-w-sm w-full text-center space-y-5 shadow-2xl border border-indigo-500/20"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">Scan Complete!</h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                {scanResult?.scanType === "baseline" 
+                  ? "Your baseline scan has been successfully uploaded and processed."
+                  : "Your follow-up scan has been analyzed. Smart predictions and shopping lists are now updated."}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Link 
+                to="/dashboard"
+                className="glow-btn inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition cursor-pointer"
+              >
+                Go to Dashboard
+                <ArrowRight className="h-4 w-4 ml-1.5" />
+              </Link>
+              <button 
+                onClick={() => setShowPopup(false)}
+                className="rounded-xl bg-white/5 border border-gray-750 hover:bg-white/10 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:text-white transition cursor-pointer"
+              >
+                Keep Scanning
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
 

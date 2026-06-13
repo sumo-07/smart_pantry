@@ -124,7 +124,7 @@ export default function Dashboard({
             <button
               onClick={onTriggerCompare}
               disabled={isComparing}
-              className="inline-flex items-center justify-center rounded-xl bg-white/5 border border-gray-700 hover:border-gray-600 px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white transition disabled:opacity-50"
+              className="cursor-pointer disabled:cursor-not-allowed inline-flex items-center justify-center rounded-xl bg-white/5 border border-gray-700 hover:border-gray-600 px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white transition disabled:opacity-50"
             >
               <RefreshCw className={`h-4.5 w-4.5 mr-2 ${isComparing ? "animate-spin" : ""}`} />
               Recalculate Predictions

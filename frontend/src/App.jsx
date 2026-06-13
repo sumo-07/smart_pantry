@@ -149,6 +149,7 @@ function AppContent() {
     const result = await response.json();
 
     // If using LocalStorage fallback mode, simulate database write
+    let finalScans = [];
     if (!useFirebase) {
       const newScan = {
         id: result.scanId || "scan_" + Date.now(),
@@ -158,39 +159,67 @@ function AppContent() {
         items: result.items
       };
       
-      const updatedScans = [...scans, newScan].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      setScans(updatedScans);
-      localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(updatedScans));
+      finalScans = [...scans, newScan].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      setScans(finalScans);
+      localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(finalScans));
     } else {
       // Reload scans from Firestore
       const scansQuery = query(collection(db, "scans"), where("userId", "==", userId));
       const scansSnap = await getDocs(scansQuery);
-      const loadedScans = [];
+      finalScans = [];
       scansSnap.forEach(doc => {
-        loadedScans.push({ id: doc.id, ...doc.data() });
+        finalScans.push({ id: doc.id, ...doc.data() });
       });
-      loadedScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      setScans(loadedScans);
+
+      // If the newly created scan is missing due to index replication lag, manually inject it so the UI updates immediately
+      if (result.scanId && !finalScans.some(s => s.id === result.scanId)) {
+        finalScans.push({
+          id: result.scanId,
+          userId,
+          timestamp: new Date().toISOString(),
+          scanType,
+          items: result.items
+        });
+      }
+
+      finalScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      setScans(finalScans);
     }
 
     // Auto-trigger inventory comparison if we now have at least two scans
-    const currentScansCount = scans.length + 1;
-    if (currentScansCount >= 2) {
-      await handleCompare();
+    if (finalScans.length >= 2) {
+      // Find the latest baseline scan ID and current scan ID for strongly consistent fetch
+      let baselineScanId = null;
+      let currentScanId = result.scanId || finalScans[finalScans.length - 1].id;
+
+      // Find the latest scan of type "baseline"
+      const baseScan = finalScans.slice().reverse().find(s => s.scanType === "baseline");
+      if (baseScan) {
+        baselineScanId = baseScan.id;
+      }
+
+      // If we don't have a baseline scan ID (or if it's the same as the current scan),
+      // default to the second-to-last scan
+      if (!baselineScanId || baselineScanId === currentScanId) {
+        const secondToLast = finalScans[finalScans.length - 2];
+        baselineScanId = secondToLast.id;
+      }
+
+      await handleCompare(baselineScanId, currentScanId);
     }
 
     return result;
   };
 
   // Handle Comparison and predictions
-  const handleCompare = async () => {
+  const handleCompare = async (baselineScanId = null, currentScanId = null) => {
     if (!userId) return;
     setIsComparing(true);
     try {
       const response = await fetch(`${API_URL}/compare`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId, baselineScanId, currentScanId })
       });
 
       if (!response.ok) {
@@ -205,13 +234,6 @@ function AppContent() {
       if (!useFirebase) {
         localStorage.setItem(`pantry_predictions_${userId}`, JSON.stringify(result.predictions));
         localStorage.setItem(`pantry_shoppingList_${userId}`, JSON.stringify(result.shoppingList));
-      } else {
-        // Sync items from Firestore
-        const predDoc = await getDoc(doc(db, "predictions", userId));
-        if (predDoc.exists()) setPredictions(predDoc.data().predictions || []);
-
-        const listDoc = await getDoc(doc(db, "shoppingLists", userId));
-        if (listDoc.exists()) setShoppingList(listDoc.data().items || []);
       }
     } catch (err) {
       console.error("Error comparing scans:", err);
