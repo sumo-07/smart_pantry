@@ -82,6 +82,24 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
 
     let items = [];
 
+    // Fetch existing items for naming consistency
+    let existingItemNames = [];
+    try {
+      const scansRef = collection(db, "scans");
+      const q = query(scansRef, where("userId", "==", userId));
+      const querySnapshot = await getDocs(q);
+      const userScans = [];
+      querySnapshot.forEach(doc => {
+        userScans.push(doc.data());
+      });
+      if (userScans.length > 0) {
+        userScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        existingItemNames = userScans[0].items.map(item => item.name);
+      }
+    } catch (err) {
+      console.error("Error fetching previous scan items for consistency:", err);
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: "No image file provided." });
     }
@@ -98,7 +116,7 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
       ];
     } else {
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const prompt = `Analyze this fridge or pantry image.
+      let prompt = `Analyze this fridge or pantry image.
 Identify visible grocery items.
 Estimate quantity.
 Return JSON only.
@@ -111,6 +129,11 @@ Format:
     }
   ]
 }`;
+
+      if (existingItemNames.length > 0) {
+        prompt += `\n\nCRITICAL: The user currently has these items in their pantry: ${JSON.stringify(existingItemNames)}. 
+If you detect any of these items in the new image, you MUST use the exact same name from this list (case-sensitive) to keep tracking consistent. For example, if you see milk cartons and the list contains "Milk", use "Milk". Do not invent new names or variations like "milk carton" if it corresponds to an existing item in the list.`;
+      }
 
       const imagePart = bufferToGenerativePart(req.file.buffer, req.file.mimetype);
       const result = await model.generateContent([prompt, imagePart], {
