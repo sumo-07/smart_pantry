@@ -88,7 +88,7 @@ export default function InsightCard({ predictions = [] }) {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
         {insightsList.map((insight, idx) => {
           const Icon = insight.icon;
           return (
