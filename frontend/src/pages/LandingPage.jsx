@@ -65,12 +65,6 @@ export default function LandingPage({ userId }) {
                 Start Scanning
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Link>
-              <Link
-                to={userId ? "/dashboard" : "/scan"}
-                className="inline-flex items-center justify-center rounded-2xl bg-white/5 border border-gray-700 hover:border-gray-600 px-6 py-3.5 text-base font-semibold text-gray-300 hover:text-white transition"
-              >
-                View Demo
-              </Link>
             </motion.div>
 
             {/* Mini Trust Stats */}
