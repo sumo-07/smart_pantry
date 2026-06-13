@@ -199,17 +199,10 @@ export default function Dashboard({
 
         {/* Table & Comparisons */}
         <div className="layout-split:col-span-8 space-y-6">
-          {predictions.length > 0 ? (
-            <InventoryTable items={predictions} />
-          ) : (
-            <div className="glass-panel rounded-3xl p-8 text-center space-y-3">
-              <Package className="h-8 w-8 text-indigo-400 mx-auto" />
-              <h4 className="text-sm font-bold text-white">No Predictions Generated</h4>
-              <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                After uploading your second scan, the system automatically compares both and forecasts depletion.
-              </p>
-            </div>
-          )}
+          <InventoryTable 
+            items={predictions} 
+            latestScanItems={scans[scans.length - 1]?.items || []} 
+          />
         </div>
 
       </div>

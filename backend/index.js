@@ -140,7 +140,7 @@ If you detect any of these items in the new image, you MUST use the exact same n
         generationConfig: { responseMimeType: "application/json" }
       });
 
-       const responseText = result.response.text();
+      const responseText = result.response.text();
       try {
         const cleanedText = cleanJSONResponse(responseText);
         const parsed = JSON.parse(cleanedText);
@@ -235,8 +235,13 @@ app.post("/api/compare", async (req, res) => {
         }
       }
 
+      // If the latest scan in history is a baseline scan, compare it to itself (resets predictions for new cycle)
+      if (userScans[userScans.length - 1].scanType === "baseline") {
+        baselineScan = userScans[userScans.length - 1];
+        currentScan = userScans[userScans.length - 1];
+      }
       // If we found a baseline scan and there is at least one subsequent scan after it:
-      if (lastBaseIdx !== -1 && lastBaseIdx < userScans.length - 1) {
+      else if (lastBaseIdx !== -1 && lastBaseIdx < userScans.length - 1) {
         baselineScan = userScans[lastBaseIdx];
         currentScan = userScans[userScans.length - 1];
       } else {

@@ -188,24 +188,29 @@ function AppContent() {
 
     // Auto-trigger inventory comparison if we now have at least two scans
     if (finalScans.length >= 2) {
-      // Find the latest baseline scan ID and current scan ID for strongly consistent fetch
-      let baselineScanId = null;
-      let currentScanId = result.scanId || finalScans[finalScans.length - 1].id;
+      if (scanType === "baseline") {
+        // A new baseline scan starts a new tracking cycle. Compare it to itself to reset predictions.
+        await handleCompare(result.scanId, result.scanId);
+      } else {
+        // Subsequent scan: compare against the latest baseline scan in history
+        let baselineScanId = null;
+        const currentScanId = result.scanId || finalScans[finalScans.length - 1].id;
 
-      // Find the latest scan of type "baseline"
-      const baseScan = finalScans.slice().reverse().find(s => s.scanType === "baseline");
-      if (baseScan) {
-        baselineScanId = baseScan.id;
+        // Find the latest baseline scan in history (excluding the current scan itself)
+        const baseScan = finalScans
+          .slice()
+          .reverse()
+          .find(s => s.scanType === "baseline" && s.id !== currentScanId);
+
+        if (baseScan) {
+          baselineScanId = baseScan.id;
+        } else {
+          // Fallback to second-to-last scan
+          baselineScanId = finalScans[finalScans.length - 2].id;
+        }
+
+        await handleCompare(baselineScanId, currentScanId);
       }
-
-      // If we don't have a baseline scan ID (or if it's the same as the current scan),
-      // default to the second-to-last scan
-      if (!baselineScanId || baselineScanId === currentScanId) {
-        const secondToLast = finalScans[finalScans.length - 2];
-        baselineScanId = secondToLast.id;
-      }
-
-      await handleCompare(baselineScanId, currentScanId);
     }
 
     return result;
