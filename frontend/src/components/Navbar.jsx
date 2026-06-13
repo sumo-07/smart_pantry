@@ -87,19 +87,21 @@ export default function Navbar({ familySize }) {
             {user ? (
               <div className="flex items-center gap-3 pl-4 border-l border-brand-border">
                 <div className="flex flex-col text-right">
-                  <span className="text-xs text-gray-500 font-medium">Account</span>
-                  <span className="text-sm text-gray-200 font-semibold truncate max-w-[140px]">
+                  <span className="text-sm text-gray-200 font-semibold truncate max-w-[150px]">
                     {user.displayName || user.email?.split("@")[0] || "User"}
+                  </span>
+                  <span className="text-[10px] text-gray-500 truncate max-w-[150px]">
+                    {user.email}
                   </span>
                 </div>
                 {user.photoURL ? (
                   <img 
                     src={user.photoURL} 
                     alt="User profile" 
-                    className="h-9 w-9 rounded-xl border border-gray-750 object-cover"
+                    className="h-9 w-9 rounded-xl border border-brand-border object-cover overflow-hidden"
                   />
                 ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-800 border border-gray-700 text-gray-300">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-800 border border-brand-border text-gray-300 overflow-hidden">
                     <User className="h-4.5 w-4.5" />
                   </div>
                 )}
@@ -178,8 +180,10 @@ export default function Navbar({ familySize }) {
               
               <div className="border-t border-brand-border my-2 pt-2 px-3 flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-500">Logged in as</span>
-                  <span className="text-sm font-semibold text-gray-250">{user.email}</span>
+                  <span className="text-sm font-bold text-white">
+                    {user.displayName || user.email?.split("@")[0] || "User"}
+                  </span>
+                  <span className="text-xs text-gray-500">{user.email}</span>
                 </div>
                 <button
                   onClick={() => {
