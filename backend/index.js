@@ -401,6 +401,369 @@ app.get("/api/shopping-list", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/amazon-now/generate-cart
+ * Generates an urgent quick-commerce shopping cart based on a natural language scenario using Gemini.
+ */
+app.post("/api/amazon-now/generate-cart", async (req, res) => {
+  try {
+    const { scenario } = req.body;
+    if (!scenario) {
+      return res.status(400).json({ error: "Missing scenario in request body." });
+    }
+
+    let cart = [];
+    let recommendation_reason = [];
+    let urgency_score = 50;
+
+    if (!genAI) {
+      console.warn("GEMINI_API_KEY is not set. Using simulated emergency shopping cart.");
+      const normalizedScenario = scenario.toLowerCase();
+      
+      if (normalizedScenario.includes("guest") || normalizedScenario.includes("party") || normalizedScenario.includes("friend") || normalizedScenario.includes("minute")) {
+        cart = [
+          { name: "Soft Drinks", quantity: 2, price: 3.99 },
+          { name: "Chips", quantity: 3, price: 2.49 },
+          { name: "Ice Cream", quantity: 1, price: 5.99 },
+          { name: "Paper Plates", quantity: 1, price: 2.99 }
+        ];
+        recommendation_reason = [
+          "Drinks and snacks are hosting essentials that require zero prep time.",
+          "Paper plates eliminate cleanup, saving time for when guests arrive.",
+          "Ice cream serves as a quick, crowd-pleasing dessert."
+        ];
+        urgency_score = 95;
+      } else if (normalizedScenario.includes("headache") || normalizedScenario.includes("sick") || normalizedScenario.includes("fever") || normalizedScenario.includes("cold") || normalizedScenario.includes("pain")) {
+        cart = [
+          { name: "ORS", quantity: 2, price: 1.99 },
+          { name: "Water Bottles", quantity: 4, price: 0.99 },
+          { name: "Pain Relief", quantity: 1, price: 6.49 },
+          { name: "Light Snacks", quantity: 1, price: 3.49 }
+        ];
+        recommendation_reason = [
+          "ORS and Water are critical for maintaining hydration when feeling ill.",
+          "Over-the-counter pain relief targets headaches and fever symptoms directly.",
+          "Light snacks provide easy-to-digest energy without stressing your stomach."
+        ];
+        urgency_score = 90;
+      } else if (normalizedScenario.includes("study") || normalizedScenario.includes("night") || normalizedScenario.includes("exam") || normalizedScenario.includes("work")) {
+        cart = [
+          { name: "Coffee", quantity: 2, price: 4.99 },
+          { name: "Energy Drink", quantity: 2, price: 2.99 },
+          { name: "Instant Noodles", quantity: 3, price: 1.29 },
+          { name: "Biscuits", quantity: 2, price: 1.99 }
+        ];
+        recommendation_reason = [
+          "Coffee and energy drinks provide the caffeine boost required for staying alert.",
+          "Instant noodles offer a quick hot meal that takes less than 5 minutes to prepare.",
+          "Biscuits are a convenient, mess-free snack to graze on while reading."
+        ];
+        urgency_score = 75;
+      } else if (normalizedScenario.includes("breakfast") || normalizedScenario.includes("morning") || normalizedScenario.includes("people")) {
+        cart = [
+          { name: "Eggs (12-pack)", quantity: 1, price: 3.99 },
+          { name: "White Bread", quantity: 1, price: 2.49 },
+          { name: "Fresh Milk", quantity: 1, price: 3.29 },
+          { name: "Orange Juice", quantity: 1, price: 4.49 }
+        ];
+        recommendation_reason = [
+          "Eggs and toast make a high-protein, quick breakfast standard.",
+          "Milk and orange juice cover basic beverage needs for a complete meal.",
+          "Portions are scaled appropriately for breakfast for multiple people."
+        ];
+        urgency_score = 60;
+      } else if (normalizedScenario.includes("movie") || normalizedScenario.includes("show") || normalizedScenario.includes("netflix") || normalizedScenario.includes("date")) {
+        cart = [
+          { name: "Popcorn", quantity: 2, price: 2.99 },
+          { name: "Chocolates", quantity: 3, price: 1.99 },
+          { name: "Soft Drinks", quantity: 2, price: 3.99 }
+        ];
+        recommendation_reason = [
+          "Popcorn is the classic movie-watching snack, quick to microwave.",
+          "Chocolates satisfy sweet cravings during the film.",
+          "Soft drinks wash down the salty snacks."
+        ];
+        urgency_score = 50;
+      } else {
+        // Generic fallback
+        cart = [
+          { name: "Instant Noodles", quantity: 2, price: 1.29 },
+          { name: "Water Bottles", quantity: 2, price: 1.99 },
+          { name: "Potato Chips", quantity: 1, price: 2.49 }
+        ];
+        recommendation_reason = [
+          "Instant food helps satisfy immediate hunger in general emergencies.",
+          "Water bottles ensure clean drinking water is on hand.",
+          "Salty snacks provide quick, shelf-stable energy."
+        ];
+        urgency_score = 40;
+      }
+    } else {
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const prompt = `Act as an Amazon Now quick-commerce shopping assistant.
+Given a real-life scenario, generate a practical, concise emergency shopping cart optimized for urgent delivery.
+
+Scenario: "${scenario}"
+
+Rules:
+1. Recommend only essential items that directly address the scenario.
+2. Keep the cart concise (usually 3-6 unique items).
+3. Include quantity recommendations.
+4. Estimate a realistic price in USD (as a floating-point number, e.g., 2.99 or 4.50) for each item.
+5. Provide a list of 2-3 specific reasons (as an array of strings called "recommendation_reason") explaining why these items were selected for this scenario.
+6. Calculate an "urgency_score" (integer between 1 and 100) representing how time-critical this shopping trip is (e.g. medical emergencies or guests arriving in 30 mins are 90+, while general movie night or planning tomorrow's breakfast is lower).
+7. Return valid JSON only.
+
+Format:
+{
+  "scenario": "${scenario}",
+  "cart": [
+    {
+      "name": "Soft Drinks",
+      "quantity": 2,
+      "price": 2.99
+    },
+    {
+      "name": "Chips",
+      "quantity": 3,
+      "price": 3.49
+    }
+  ],
+  "recommendation_reason": [
+    "Drinks and snacks are hosting essentials that require zero prep time.",
+    "Matches the quick arrival timeline specified in the scenario."
+  ],
+  "urgency_score": 95
+}`;
+
+      const result = await model.generateContent(prompt, {
+        generationConfig: { responseMimeType: "application/json" }
+      });
+
+      const responseText = result.response.text();
+      try {
+        const cleanedText = cleanJSONResponse(responseText);
+        const parsed = JSON.parse(cleanedText);
+        cart = parsed.cart || [];
+        recommendation_reason = parsed.recommendation_reason || [];
+        urgency_score = typeof parsed.urgency_score === 'number' ? parsed.urgency_score : 50;
+
+        // Clean/ensure formats
+        cart = cart.map(item => ({
+          name: item.name || "Unknown Item",
+          quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+          price: typeof item.price === 'number' ? item.price : parseFloat((Math.random() * 5 + 1.5).toFixed(2))
+        }));
+      } catch (parseErr) {
+        console.error("Failed to parse Gemini response for generate-cart:", responseText, parseErr);
+        return res.status(500).json({ error: "Gemini returned invalid JSON structure." });
+      }
+    }
+
+    res.json({
+      scenario,
+      cart,
+      recommendation_reason,
+      urgency_score
+    });
+  } catch (error) {
+    console.error("Error in /api/amazon-now/generate-cart:", error);
+    res.status(500).json({ error: error.message || "Failed to generate shopping cart." });
+  }
+});
+
+// ----------------------------------------------------
+// ORDERS ENDPOINTS
+// ----------------------------------------------------
+
+/**
+ * POST /api/orders
+ * Creates a new order and saves it to Firebase.
+ * Body: { userId, items: [...], totalPrice, deliveryAddress, notes }
+ */
+app.post("/api/orders", async (req, res) => {
+  try {
+    const { userId, items, totalPrice, deliveryAddress, notes } = req.body;
+    
+    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ 
+        error: "Missing required fields: userId, items (non-empty array)" 
+      });
+    }
+
+    const ordersRef = collection(db, "orders");
+    const newOrder = {
+      userId,
+      items,
+      totalPrice: Number(totalPrice) || 0,
+      deliveryAddress: deliveryAddress || "",
+      notes: notes || "",
+      status: "Placing", // Status: Placing → Preparing → Packing → Out For Delivery → Delivered
+      createdAt: new Date().toISOString(),
+      estimatedDeliveryTime: new Date(Date.now() + 15 * 60000).toISOString() // 15 mins default
+    };
+
+    const docRef = await addDoc(ordersRef, newOrder);
+
+    res.status(201).json({
+      orderId: docRef.id,
+      ...newOrder,
+      message: "Order created successfully"
+    });
+
+  } catch (error) {
+    console.error("Error in /api/orders POST:", error);
+    res.status(500).json({ error: error.message || "Failed to create order." });
+  }
+});
+
+/**
+ * GET /api/orders
+ * Fetches all orders for a specific user.
+ * Query params: userId
+ */
+app.get("/api/orders", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId query param." });
+    }
+
+    const ordersRef = collection(db, "orders");
+    const q = query(ordersRef, where("userId", "==", userId), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    const orders = [];
+    querySnapshot.forEach(doc => {
+      orders.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    res.json({
+      userId,
+      orders,
+      totalOrders: orders.length
+    });
+
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ error: "Failed to fetch orders." });
+  }
+});
+
+/**
+ * GET /api/orders/:orderId
+ * Fetches a specific order by ID.
+ */
+app.get("/api/orders/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!orderId) {
+      return res.status(400).json({ error: "Missing orderId param." });
+    }
+
+    const orderDoc = await getDoc(doc(db, "orders", orderId));
+    
+    if (!orderDoc.exists()) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    res.json({
+      id: orderId,
+      ...orderDoc.data()
+    });
+
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).json({ error: "Failed to fetch order." });
+  }
+});
+
+/**
+ * PUT /api/orders/:orderId
+ * Updates an order's status or details.
+ * Body: { status, estimatedDeliveryTime, notes }
+ */
+app.put("/api/orders/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, estimatedDeliveryTime, notes } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Missing orderId param." });
+    }
+
+    const orderRef = doc(db, "orders", orderId);
+    const orderDoc = await getDoc(orderRef);
+
+    if (!orderDoc.exists()) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    const updateData = {
+      updatedAt: new Date().toISOString()
+    };
+
+    if (status) updateData.status = status;
+    if (estimatedDeliveryTime) updateData.estimatedDeliveryTime = estimatedDeliveryTime;
+    if (notes !== undefined) updateData.notes = notes;
+
+    await setDoc(orderRef, updateData, { merge: true });
+
+    res.json({
+      id: orderId,
+      ...orderDoc.data(),
+      ...updateData,
+      message: "Order updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Error updating order:", error);
+    res.status(500).json({ error: error.message || "Failed to update order." });
+  }
+});
+
+/**
+ * DELETE /api/orders/:orderId
+ * Deletes an order (soft delete - marks as cancelled).
+ */
+app.delete("/api/orders/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Missing orderId param." });
+    }
+
+    const orderRef = doc(db, "orders", orderId);
+    const orderDoc = await getDoc(orderRef);
+
+    if (!orderDoc.exists()) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    // Soft delete - mark as cancelled
+    await setDoc(orderRef, {
+      status: "Cancelled",
+      cancelledAt: new Date().toISOString()
+    }, { merge: true });
+
+    res.json({
+      id: orderId,
+      message: "Order cancelled successfully"
+    });
+
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    res.status(500).json({ error: error.message || "Failed to cancel order." });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Smart Pantry Backend running on http://localhost:${PORT}`);
 });
+

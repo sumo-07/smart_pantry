@@ -1,10 +1,26 @@
 import React from "react";
-import { CheckSquare, Square, ShoppingBag, Plus, Sparkles } from "lucide-react";
+import { CheckSquare, Square, ShoppingBag, Plus, Sparkles, ShoppingCart, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "../context/CartContext";
 
 export default function ShoppingListCard({ items = [], onToggleItem, onAddItem }) {
+  const { addToCart } = useCart();
   const [newItemName, setNewItemName] = React.useState("");
   const [newItemQty, setNewItemQty] = React.useState(1);
+  const [addedItems, setAddedItems] = React.useState({}); // Visual feedback for added items
+
+  const handleAddToCart = (item) => {
+    addToCart({
+      name: item.name,
+      quantity: Number(item.quantityNeeded) || 1,
+      price: 1.99 // Default fallback price for custom scanned items
+    });
+
+    setAddedItems((prev) => ({ ...prev, [item.name]: true }));
+    setTimeout(() => {
+      setAddedItems((prev) => ({ ...prev, [item.name]: false }));
+    }, 1500);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -103,11 +119,30 @@ export default function ShoppingListCard({ items = [], onToggleItem, onAddItem }
                     {item.name}
                   </span>
                 </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ${
-                  item.checked ? "bg-gray-800 text-gray-600" : "bg-indigo-500/10 text-indigo-400"
-                }`}>
-                  Need {item.quantityNeeded}
-                </span>
+                <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ${
+                    item.checked ? "bg-gray-800 text-gray-650" : "bg-indigo-500/10 text-indigo-400"
+                  }`}>
+                    Need {item.quantityNeeded}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(item)}
+                    disabled={item.checked}
+                    className={`p-1.5 rounded-lg border transition cursor-pointer flex items-center justify-center ${
+                      addedItems[item.name]
+                        ? "bg-emerald-500 text-brand-dark border-emerald-500"
+                        : "bg-white/5 hover:bg-indigo-500 text-gray-400 hover:text-white border-brand-border hover:border-indigo-500 disabled:opacity-40 disabled:pointer-events-none"
+                    }`}
+                    title="Add to Amazon Now Cart"
+                  >
+                    {addedItems[item.name] ? (
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
+                    ) : (
+                      <ShoppingCart className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
               </motion.div>
             ))
           )}

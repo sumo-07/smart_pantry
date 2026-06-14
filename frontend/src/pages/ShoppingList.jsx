@@ -20,16 +20,7 @@ export default function ShoppingList({
     );
   }
 
-  if (!scansExist) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        <EmptyState 
-          title="No Shopping List Yet" 
-          description="Your shopping list is automatically generated based on items that are running low in your pantry scans."
-        />
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
