@@ -372,7 +372,7 @@ export default function Cart() {
                 {cart.map((item) => (
                   <div
                     key={item.name}
-                    className="glass-panel rounded-3xl p-4 flex items-center justify-between gap-4 border border-brand-border hover:border-white/10 transition"
+                    className="glass-panel rounded-3xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-brand-border hover:border-white/10 transition"
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       {/* Product Image */}
@@ -391,7 +391,7 @@ export default function Cart() {
                       </div>
 
                       {/* Name */}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-extrabold text-white text-sm sm:text-base leading-snug truncate" title={item.name}>
                           {item.name}
                         </h4>
@@ -403,7 +403,7 @@ export default function Cart() {
                     </div>
 
                     {/* Controls & subtotal */}
-                    <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 shrink-0 pt-2 sm:pt-0 border-t border-brand-border/40 sm:border-t-0">
                       {/* Adjusters */}
                       <div className="flex items-center gap-1.5 bg-white/5 border border-gray-800 rounded-xl p-1">
                         <button
@@ -443,7 +443,7 @@ export default function Cart() {
 
             {/* Cart Summary & Order Action */}
             <div className="lg:col-span-4 space-y-4">
-              <div className="glass-panel rounded-3xl p-6 bg-gradient-to-br from-gray-900/60 to-indigo-500/5 border border-indigo-500/10 space-y-4">
+              <div className="glass-panel rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-gray-900/60 to-indigo-500/5 border border-indigo-500/10 space-y-4">
                 <h4 className="font-extrabold text-white text-base">Cart Summary</h4>
                 
                 <div className="space-y-2 border-b border-brand-border pb-4 text-sm text-gray-400">

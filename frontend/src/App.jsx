@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import AmazonNow from "./pages/AmazonNow";
 import Products from "./pages/Products";
 import Cart from "./pages/Cart";
+import Orders from "./pages/Orders";
 import { db, useFirebase } from "./firebase";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
@@ -515,6 +516,17 @@ function AppContent() {
               element={
                 user ? (
                   <Cart />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+
+            <Route 
+              path="/orders" 
+              element={
+                user ? (
+                  <Orders />
                 ) : (
                   <Navigate to="/login" replace />
                 )

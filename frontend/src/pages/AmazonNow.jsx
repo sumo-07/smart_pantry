@@ -89,8 +89,7 @@ export default function AmazonNow() {
 
       const data = await response.json();
       
-      // Start scenario fresh by clearing old items
-      clearCart();
+      // Merge AI-generated items into existing cart
       addMultipleToCart(data.cart || []);
       
       setReasoning(data.recommendation_reason || []);
@@ -283,7 +282,7 @@ export default function AmazonNow() {
             <div className="lg:col-span-5 space-y-6">
               
               {/* Scenario Generator Form */}
-              <div className="glass-panel rounded-3xl p-6 relative overflow-hidden">
+              <div className="glass-panel rounded-3xl p-4 sm:p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 -mr-6 -mt-6 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none" />
                 
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -354,7 +353,7 @@ export default function AmazonNow() {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="glass-panel rounded-3xl p-6 border-l-4 border-l-indigo-500"
+                  className="glass-panel rounded-3xl p-4 sm:p-6 border-l-4 border-l-indigo-500"
                 >
                   <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
                     <HelpCircle className="h-5 w-5 text-indigo-400" />
@@ -423,10 +422,10 @@ export default function AmazonNow() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 10 }}
-                          className="glass-panel rounded-2xl p-4 flex items-center justify-between gap-4 border border-brand-border hover:border-white/10 transition"
+                          className="glass-panel rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-brand-border hover:border-white/10 transition"
                         >
                           {/* Name & unit price */}
-                          <div className="overflow-hidden">
+                          <div className="overflow-hidden min-w-0 flex-1">
                             <h4 className="font-bold text-white truncate">{item.name}</h4>
                             <p className="text-xs text-gray-400 flex items-center gap-0.5 mt-0.5">
                               <DollarSign className="h-3 w-3" />
@@ -435,7 +434,7 @@ export default function AmazonNow() {
                           </div>
 
                           {/* Controls & subtotal */}
-                          <div className="flex items-center gap-5 shrink-0">
+                          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 shrink-0 pt-2 sm:pt-0 border-t border-brand-border/40 sm:border-t-0">
                             {/* Quantity Adjusters */}
                             <div className="flex items-center gap-2 bg-white/5 border border-gray-800 rounded-xl p-1">
                               <button
@@ -493,7 +492,7 @@ export default function AmazonNow() {
                   {cart.length > 0 && (
                     <motion.div 
                       layout
-                      className="glass-panel rounded-3xl p-6 bg-gradient-to-br from-gray-900/60 to-amber-500/5 border border-amber-500/10 space-y-4"
+                      className="glass-panel rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-gray-900/60 to-amber-500/5 border border-amber-500/10 space-y-4"
                     >
                       <div className="flex items-center justify-between border-b border-brand-border pb-4">
                         <div>
@@ -728,7 +727,7 @@ export default function AmazonNow() {
                   onClick={() => {
                     handleResetOrder();
                     setHasGenerated(false);
-                    setCart([]);
+                    clearCart();
                     setReasoning([]);
                     setUrgencyScore(0);
                     setScenario("");
