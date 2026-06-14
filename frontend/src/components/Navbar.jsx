@@ -133,10 +133,10 @@ export default function Navbar({ familySize }) {
           )}
 
           {/* User Profile / Info (Desktop) */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4 shrink-0">
             {user ? (
-              <div className="flex items-center gap-3 pl-4 border-l border-brand-border">
-                <div className="flex flex-col text-right">
+              <div className="flex items-center gap-3 pl-4 border-l border-brand-border min-w-0">
+                <div className="flex flex-col text-right min-w-0">
                   <span className="text-sm text-gray-200 font-semibold truncate max-w-[150px]">
                     {user.displayName || user.email?.split("@")[0] || "User"}
                   </span>
@@ -148,10 +148,11 @@ export default function Navbar({ familySize }) {
                   <img 
                     src={user.photoURL} 
                     alt="User profile" 
-                    className="h-9 w-9 rounded-xl border border-brand-border object-cover overflow-hidden"
+                    referrerPolicy="no-referrer"
+                    className="h-9 w-9 rounded-xl border border-brand-border object-cover overflow-hidden shrink-0"
                   />
                 ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-800 border border-brand-border text-gray-300 overflow-hidden">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-800 border border-brand-border text-gray-300 overflow-hidden shrink-0">
                     <User className="h-4.5 w-4.5" />
                   </div>
                 )}
@@ -159,7 +160,7 @@ export default function Navbar({ familySize }) {
                 <Link
                   to="/orders"
                   title="Order History"
-                  className={`p-2 rounded-xl transition cursor-pointer border ${
+                  className={`p-2 rounded-xl transition cursor-pointer border shrink-0 ${
                     isActive("/orders")
                       ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/25"
                       : "text-gray-400 hover:text-white hover:bg-white/5 border-transparent"
@@ -171,7 +172,7 @@ export default function Navbar({ familySize }) {
                 <button
                   onClick={handleLogout}
                   title="Sign Out"
-                  className="p-2 text-gray-450 hover:text-rose-400 rounded-xl hover:bg-rose-500/5 transition cursor-pointer"
+                  className="p-2 text-gray-450 hover:text-rose-400 rounded-xl hover:bg-rose-500/5 transition cursor-pointer shrink-0"
                 >
                   <LogOut className="h-4.5 w-4.5" />
                 </button>
