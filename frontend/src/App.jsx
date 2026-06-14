@@ -9,8 +9,12 @@ import ShoppingList from "./pages/ShoppingList";
 import Insights from "./pages/Insights";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import AmazonNow from "./pages/AmazonNow";
+import Products from "./pages/Products";
+import Cart from "./pages/Cart";
 import { db, useFirebase } from "./firebase";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import { Loader2 } from "lucide-react";
 import { 
   doc, 
@@ -456,17 +460,13 @@ function AppContent() {
               path="/shopping-list" 
               element={
                 user ? (
-                  familySize ? (
-                    <ShoppingList 
-                      shoppingList={shoppingList}
-                      onToggleItem={handleToggleShoppingItem}
-                      onAddItem={handleAddShoppingItem}
-                      isLoading={dbLoading}
-                      scansExist={scans.length > 0}
-                    />
-                  ) : (
-                    <Navigate to="/scan" replace />
-                  )
+                  <ShoppingList 
+                    shoppingList={shoppingList}
+                    onToggleItem={handleToggleShoppingItem}
+                    onAddItem={handleAddShoppingItem}
+                    isLoading={dbLoading}
+                    scansExist={scans.length > 0}
+                  />
                 ) : (
                   <Navigate to="/login" replace />
                 )
@@ -477,15 +477,44 @@ function AppContent() {
               path="/insights" 
               element={
                 user ? (
-                  familySize ? (
-                    <Insights 
-                      predictions={predictions}
-                      isLoading={dbLoading}
-                      scansExist={scans.length > 0}
-                    />
-                  ) : (
-                    <Navigate to="/scan" replace />
-                  )
+                  <Insights 
+                    predictions={predictions}
+                    isLoading={dbLoading}
+                    scansExist={scans.length > 0}
+                  />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+
+            <Route 
+              path="/amazon-now" 
+              element={
+                user ? (
+                  <AmazonNow />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+
+            <Route 
+              path="/products" 
+              element={
+                user ? (
+                  <Products />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+
+            <Route 
+              path="/cart" 
+              element={
+                user ? (
+                  <Cart />
                 ) : (
                   <Navigate to="/login" replace />
                 )
@@ -504,9 +533,11 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <CartProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   );
 }

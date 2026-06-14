@@ -1,3 +1,8 @@
+# Environment variables (SENSITIVE - NEVER COMMIT!)
+.env
+.env.local
+.env.*.local
+
 # Logs
 logs
 *.log
@@ -7,10 +12,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
+
+# Firebase credentials (CRITICAL - NEVER COMMIT!)
+*-firebase-adminsdk-*.json
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +31,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+

@@ -20,6 +20,16 @@ build/
 **/.env.local
 **/.env.*.local
 
+# Firebase credentials (CRITICAL - NEVER COMMIT!)
+*-firebase-adminsdk-*.json
+firebase-key.json
+**/*-firebase-adminsdk-*.json
+
+# API Keys and secrets
+.env.secret
+secrets.json
+config.secret.js
+
 # Logs
 logs
 *.log
