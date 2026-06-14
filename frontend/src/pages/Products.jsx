@@ -28,7 +28,7 @@ const MOCK_PRODUCTS = [
     name: "Cheddar Cheese Block",
     category: "Dairy",
     price: 4.99,
-    image: "https://images.unsplash.com/photo-1486887396153-fa416525c108?auto=format&fit=crop&w=300&q=80"
+    image: "https://www.luckystore.in/cdn/shop/files/Kraft-Cheddar-Cheese-250g-_-Rich_-Creamy-Cheddar-for-Cooking-_-Snacking-Luckystore-60023147.png?v=1752234416?auto=format&fit=crop&w=300&q=80"
   },
   {
     id: "p3",
@@ -50,7 +50,7 @@ const MOCK_PRODUCTS = [
     name: "Classic Potato Chips",
     category: "Snacks",
     price: 2.49,
-    image: "https://images.unsplash.com/photo-1566478989037-eec170784d20?auto=format&fit=crop&w=300&q=80"
+    image: "https://5.imimg.com/data5/SELLER/Default/2025/5/511440611/QI/MZ/AT/244860561/lays-potato-chips.jpg?auto=format&fit=crop&w=300&q=80"
   },
   {
     id: "p6",
@@ -64,7 +64,7 @@ const MOCK_PRODUCTS = [
     name: "Salted Roasted Peanuts",
     category: "Snacks",
     price: 1.99,
-    image: "https://images.unsplash.com/photo-1517244683807-7ae58e2b254a?auto=format&fit=crop&w=300&q=80"
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNBJXkbUyyC_3BDUOcb_M8g97XIvpfVvR4amnwyEpWZ3FcYCD-1237F_o&s=10?auto=format&fit=crop&w=300&q=80"
   },
   // Beverages
   {
@@ -93,7 +93,7 @@ const MOCK_PRODUCTS = [
     name: "Sparkling Water (Lime)",
     category: "Beverages",
     price: 1.29,
-    image: "https://images.unsplash.com/photo-1608885898957-a599fb1698d6?auto=format&fit=crop&w=300&q=80"
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIjyar4O5NIAAkNNzBJ34UGvZgu7KtEd6AFLO9ooU7XtpUEPh-4dL150JM&s=10?auto=format&fit=crop&w=300&q=80"
   },
   // Bakery
   {
@@ -123,7 +123,7 @@ const MOCK_PRODUCTS = [
     name: "Fluoride Toothpaste (Mint)",
     category: "Personal Care",
     price: 2.99,
-    image: "https://images.unsplash.com/photo-1559592443-7f87a8402561?auto=format&fit=crop&w=300&q=80"
+    image: "https://pxmshare.colgatepalmolive.com/JPEG_1500/WqwryYufAcH_OJXibXTf9.jpg?auto=format&fit=crop&w=300&q=80"
   },
   {
     id: "p16",
@@ -248,11 +248,10 @@ export default function Products() {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`text-xs px-4 py-2.5 rounded-xl border font-bold transition duration-200 cursor-pointer ${
-              selectedCategory === cat
-                ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/10"
-                : "bg-white/4 text-gray-400 border-brand-border hover:bg-white/10 hover:text-white"
-            }`}
+            className={`text-xs px-4 py-2.5 rounded-xl border font-bold transition duration-200 cursor-pointer ${selectedCategory === cat
+              ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/10"
+              : "bg-white/4 text-gray-400 border-brand-border hover:bg-white/10 hover:text-white"
+              }`}
           >
             {cat}
           </button>
@@ -260,7 +259,7 @@ export default function Products() {
       </div>
 
       {/* Grid of Products */}
-      <motion.div 
+      <motion.div
         layout
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
       >
@@ -301,11 +300,10 @@ export default function Products() {
               {/* Action Button */}
               <button
                 onClick={() => handleAddToCart(product)}
-                className={`w-full py-2.5 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
-                  addedItems[product.id]
-                    ? "bg-emerald-500 text-brand-dark hover:bg-emerald-600 font-extrabold"
-                    : "bg-white/5 hover:bg-indigo-500 text-gray-300 hover:text-white border border-brand-border hover:border-indigo-500"
-                }`}
+                className={`w-full py-2.5 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${addedItems[product.id]
+                  ? "bg-emerald-500 text-brand-dark hover:bg-emerald-600 font-extrabold"
+                  : "bg-white/5 hover:bg-indigo-500 text-gray-300 hover:text-white border border-brand-border hover:border-indigo-500"
+                  }`}
               >
                 {addedItems[product.id] ? (
                   <>
