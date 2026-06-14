@@ -631,7 +631,7 @@ app.get("/api/orders", async (req, res) => {
     }
 
     const ordersRef = collection(db, "orders");
-    const q = query(ordersRef, where("userId", "==", userId), orderBy("createdAt", "desc"));
+    const q = query(ordersRef, where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
 
     const orders = [];
@@ -641,6 +641,9 @@ app.get("/api/orders", async (req, res) => {
         ...doc.data()
       });
     });
+
+    // Sort in-memory to avoid requiring a Firestore composite index
+    orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({
       userId,

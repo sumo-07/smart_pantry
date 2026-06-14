@@ -16,7 +16,8 @@ export default function Sidebar({ familySize }) {
     { name: "AI Insights", path: "/insights", icon: Brain },
     { name: "Amazon Now AI", path: "/amazon-now", icon: Zap },
     { name: "Products", path: "/products", icon: Package },
-    { name: "Cart", path: "/cart", icon: ShoppingCart }
+    { name: "Cart", path: "/cart", icon: ShoppingCart },
+    { name: "Orders", path: "/orders", icon: Package }
   ];
 
   const isActive = (path) => location.pathname === path;

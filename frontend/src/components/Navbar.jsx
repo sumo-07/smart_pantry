@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bot, LogOut, User, Menu, X, ShoppingCart } from "lucide-react";
+import { Bot, LogOut, User, Menu, X, ShoppingCart, Package } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
@@ -156,6 +156,18 @@ export default function Navbar({ familySize }) {
                   </div>
                 )}
                 
+                <Link
+                  to="/orders"
+                  title="Order History"
+                  className={`p-2 rounded-xl transition cursor-pointer border ${
+                    isActive("/orders")
+                      ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/25"
+                      : "text-gray-400 hover:text-white hover:bg-white/5 border-transparent"
+                  }`}
+                >
+                  <Package className="h-4.5 w-4.5" />
+                </Link>
+
                 <button
                   onClick={handleLogout}
                   title="Sign Out"
@@ -268,6 +280,17 @@ export default function Navbar({ familySize }) {
                     {cartCount}
                   </span>
                 )}
+              </Link>
+
+              <Link
+                to="/orders"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`px-3 py-2.5 rounded-xl text-base font-medium flex items-center gap-2 ${
+                  isActive("/orders") ? "bg-indigo-500/10 text-indigo-400" : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`}
+              >
+                <Package className="h-5 w-5" />
+                Orders
               </Link>
               
               <div className="border-t border-brand-border my-2 pt-2 px-3 flex items-center justify-between">
