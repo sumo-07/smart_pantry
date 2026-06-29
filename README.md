@@ -1,4 +1,5 @@
 # Smart Pantry AI - Hackathon Project
+🚀 **Live Demo:** [Smart Pantry AI](https://smart-pantry1.netlify.app/)
 
 Smart Pantry AI is a modern SaaS-style web application designed to track pantry and fridge inventory using computer vision. By comparing snapshots taken immediately after restocking with subsequent snapshots, the app calculates item consumption rates, projects run-out dates, and compiles an auto-updating smart shopping checklist.
 
