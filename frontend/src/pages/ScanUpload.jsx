@@ -144,7 +144,7 @@ export default function ScanUpload({
                   setScanResult(null);
                   setErrorMsg("");
                 }}
-                className={`flex-1 text-center py-2 text-xs font-semibold rounded-xl transition ${
+                className={`flex-1 text-center py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
                   scanType === "baseline" 
                     ? "bg-indigo-500 text-white shadow" 
                     : "text-gray-400 hover:text-white"
@@ -167,7 +167,7 @@ export default function ScanUpload({
                   scanType === "subsequent" 
                     ? "bg-indigo-500 text-white shadow" 
                     : "text-gray-400 hover:text-white"
-                } ${!hasBaseline ? "opacity-40 cursor-not-allowed" : ""}`}
+                } ${!hasBaseline ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 Follow-up Scan (2nd)
               </button>
@@ -184,7 +184,7 @@ export default function ScanUpload({
                 <span>Household Size: {familySize} members</span>
                 <button 
                   onClick={() => setStep(1)}
-                  className="text-indigo-400 hover:underline font-semibold"
+                  className="text-indigo-400 hover:underline font-semibold cursor-pointer"
                 >
                   Change size
                 </button>
