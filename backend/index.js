@@ -4,18 +4,7 @@ import dotenv from "dotenv";
 import multer from "multer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "./firebase-config.js";
-import {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  addDoc
-} from "firebase/firestore";
+// Firebase Admin SDK manages Firestore access
 
 dotenv.config();
 
@@ -85,9 +74,8 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     // Fetch existing items for naming consistency
     let existingItemNames = [];
     try {
-      const scansRef = collection(db, "scans");
-      const q = query(scansRef, where("userId", "==", userId));
-      const querySnapshot = await getDocs(q);
+      const scansRef = db.collection("scans");
+      const querySnapshot = await scansRef.where("userId", "==", userId).get();
       const userScans = [];
       querySnapshot.forEach(doc => {
         userScans.push(doc.data());
@@ -152,18 +140,18 @@ If you detect any of these items in the new image, you MUST use the exact same n
     }
 
     // Save scan to scans collection
-    const scanRef = collection(db, "scans");
+    const scanRef = db.collection("scans");
     const newScan = {
       userId,
       timestamp: new Date().toISOString(),
       scanType,
       items
     };
-    const docRef = await addDoc(scanRef, newScan);
+    const docRef = await scanRef.add(newScan);
 
     // Save to inventories collection as current snapshot
-    const inventoryRef = doc(db, "inventories", userId);
-    await setDoc(inventoryRef, {
+    const inventoryRef = db.collection("inventories").doc(userId);
+    await inventoryRef.set({
       userId,
       items,
       lastScanId: docRef.id,
@@ -199,19 +187,18 @@ app.post("/api/compare", async (req, res) => {
     let baselineScan = null;
     let currentScan = null;
 
-    const scansRef = collection(db, "scans");
+    const scansRef = db.collection("scans");
 
     if (baselineScanId && currentScanId) {
       // Fetch specific scans
-      const baseDoc = await getDoc(doc(db, "scans", baselineScanId));
-      const currDoc = await getDoc(doc(db, "scans", currentScanId));
-      if (baseDoc.exists()) baselineScan = baseDoc.data();
-      if (currDoc.exists()) currentScan = currDoc.data();
+      const baseDoc = await db.collection("scans").doc(baselineScanId).get();
+      const currDoc = await db.collection("scans").doc(currentScanId).get();
+      if (baseDoc.exists) baselineScan = baseDoc.data();
+      if (currDoc.exists) currentScan = currDoc.data();
     } else {
       // Auto-detect scans for this user:
       // Fetch all scans for user ordered by timestamp
-      const q = query(where(scansRef, "userId", "==", userId));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await scansRef.where("userId", "==", userId).get();
       const userScans = [];
       querySnapshot.forEach(doc => {
         userScans.push({ id: doc.id, ...doc.data() });
@@ -328,16 +315,16 @@ app.post("/api/compare", async (req, res) => {
     }
 
     // Save predictions to database
-    const predDocRef = doc(db, "predictions", userId);
-    await setDoc(predDocRef, {
+    const predDocRef = db.collection("predictions").doc(userId);
+    await predDocRef.set({
       userId,
       predictions,
       updatedAt: new Date().toISOString()
     });
 
     // Save shopping list to database
-    const listDocRef = doc(db, "shoppingLists", userId);
-    await setDoc(listDocRef, {
+    const listDocRef = db.collection("shoppingLists").doc(userId);
+    await listDocRef.set({
       userId,
       items: shoppingListItems,
       updatedAt: new Date().toISOString()
@@ -366,8 +353,8 @@ app.get("/api/predictions", async (req, res) => {
       return res.status(400).json({ error: "Missing userId query param." });
     }
 
-    const predDoc = await getDoc(doc(db, "predictions", userId));
-    if (!predDoc.exists()) {
+    const predDoc = await db.collection("predictions").doc(userId).get();
+    if (!predDoc.exists) {
       return res.json({ predictions: [], message: "No predictions generated yet." });
     }
 
@@ -389,8 +376,8 @@ app.get("/api/shopping-list", async (req, res) => {
       return res.status(400).json({ error: "Missing userId query param." });
     }
 
-    const listDoc = await getDoc(doc(db, "shoppingLists", userId));
-    if (!listDoc.exists()) {
+    const listDoc = await db.collection("shoppingLists").doc(userId).get();
+    if (!listDoc.exists) {
       return res.json({ items: [], message: "No shopping list generated yet." });
     }
 
@@ -591,7 +578,7 @@ app.post("/api/orders", async (req, res) => {
       });
     }
 
-    const ordersRef = collection(db, "orders");
+    const ordersRef = db.collection("orders");
     const newOrder = {
       userId,
       items,
@@ -603,7 +590,7 @@ app.post("/api/orders", async (req, res) => {
       estimatedDeliveryTime: new Date(Date.now() + 15 * 60000).toISOString() // 15 mins default
     };
 
-    const docRef = await addDoc(ordersRef, newOrder);
+    const docRef = await ordersRef.add(newOrder);
 
     res.status(201).json({
       orderId: docRef.id,
@@ -630,9 +617,8 @@ app.get("/api/orders", async (req, res) => {
       return res.status(400).json({ error: "Missing userId query param." });
     }
 
-    const ordersRef = collection(db, "orders");
-    const q = query(ordersRef, where("userId", "==", userId));
-    const querySnapshot = await getDocs(q);
+    const ordersRef = db.collection("orders");
+    const querySnapshot = await ordersRef.where("userId", "==", userId).get();
 
     const orders = [];
     querySnapshot.forEach(doc => {
@@ -669,9 +655,9 @@ app.get("/api/orders/:orderId", async (req, res) => {
       return res.status(400).json({ error: "Missing orderId param." });
     }
 
-    const orderDoc = await getDoc(doc(db, "orders", orderId));
+    const orderDoc = await db.collection("orders").doc(orderId).get();
     
-    if (!orderDoc.exists()) {
+    if (!orderDoc.exists) {
       return res.status(404).json({ error: "Order not found." });
     }
 
@@ -700,10 +686,10 @@ app.put("/api/orders/:orderId", async (req, res) => {
       return res.status(400).json({ error: "Missing orderId param." });
     }
 
-    const orderRef = doc(db, "orders", orderId);
-    const orderDoc = await getDoc(orderRef);
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderDoc = await orderRef.get();
 
-    if (!orderDoc.exists()) {
+    if (!orderDoc.exists) {
       return res.status(404).json({ error: "Order not found." });
     }
 
@@ -715,7 +701,7 @@ app.put("/api/orders/:orderId", async (req, res) => {
     if (estimatedDeliveryTime) updateData.estimatedDeliveryTime = estimatedDeliveryTime;
     if (notes !== undefined) updateData.notes = notes;
 
-    await setDoc(orderRef, updateData, { merge: true });
+    await orderRef.set(updateData, { merge: true });
 
     res.json({
       id: orderId,
@@ -742,15 +728,15 @@ app.delete("/api/orders/:orderId", async (req, res) => {
       return res.status(400).json({ error: "Missing orderId param." });
     }
 
-    const orderRef = doc(db, "orders", orderId);
-    const orderDoc = await getDoc(orderRef);
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderDoc = await orderRef.get();
 
-    if (!orderDoc.exists()) {
+    if (!orderDoc.exists) {
       return res.status(404).json({ error: "Order not found." });
     }
 
     // Soft delete - mark as cancelled
-    await setDoc(orderRef, {
+    await orderRef.set({
       status: "Cancelled",
       cancelledAt: new Date().toISOString()
     }, { merge: true });
