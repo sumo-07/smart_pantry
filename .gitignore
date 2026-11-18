@@ -54,3 +54,6 @@ lerna-debug.log*
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Issue drafts
+GITHUB_ISSUES.md
