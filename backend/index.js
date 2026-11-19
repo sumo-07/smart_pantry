@@ -82,6 +82,56 @@ function bufferToGenerativePart(buffer, mimeType) {
 }
 
 /**
+ * Robustly parses and extracts JSON from Gemini model responses.
+ * Handles markdown fences, preamble/postamble conversational text,
+ * and JSON object/array substrings.
+ */
+function extractJSON(text) {
+  if (!text) return null;
+  let cleaned = text.trim();
+
+  // 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+  // 2. Direct parse attempt
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // 3. Extract JSON object substring { ... }
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+      } catch (e) {}
+    }
+
+    // 4. Extract JSON array substring [ ... ]
+    const firstBracket = cleaned.indexOf("[");
+    const lastBracket = cleaned.lastIndexOf("]");
+    if (firstBracket !== -1 && lastBracket > firstBracket) {
+      try {
+        const arr = JSON.parse(cleaned.substring(firstBracket, lastBracket + 1));
+        return { items: arr };
+      } catch (e) {}
+    }
+
+    // 5. Regex recovery for item names and quantities
+    const items = [];
+    const itemRegex = /"name"\s*:\s*"([^"]+)"\s*,\s*"quantity"\s*:\s*(\d+)/gi;
+    let match;
+    while ((match = itemRegex.exec(cleaned)) !== null) {
+      items.push({ name: match[1], quantity: parseInt(match[2], 10) });
+    }
+    if (items.length > 0) {
+      return { items };
+    }
+
+    return null;
+  }
+}
+
+/**
  * Calculates consumption rates, days left, and depletion status
  * by comparing a baseline scan with a current scan.
  */
@@ -288,12 +338,16 @@ If you detect any of these items in the new image, you MUST use the exact same n
       const result = await model.generateContent([prompt, imagePart]);
 
       const responseText = result.response.text();
-      try {
-        const parsed = JSON.parse(responseText);
-        items = parsed.items || [];
-      } catch (parseErr) {
-        console.error("Failed to parse Gemini response:", responseText, parseErr);
-        return res.status(500).json({ error: "Gemini Vision returned invalid JSON structure." });
+      const parsed = extractJSON(responseText);
+      if (parsed) {
+        const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || parsed.inventory || []);
+        items = rawItems.map(item => ({
+          name: String(item.name || item.item || item.product || "Unknown Item").trim(),
+          quantity: Math.max(1, parseInt(item.quantity, 10) || 1)
+        }));
+      } else {
+        console.warn("Could not parse structured JSON from Gemini vision response, defaulting to empty items:", responseText);
+        items = [];
       }
     }
 
@@ -630,8 +684,8 @@ Format:
       const result = await model.generateContent(prompt);
 
       const responseText = result.response.text();
-      try {
-        const parsed = JSON.parse(responseText);
+      const parsed = extractJSON(responseText);
+      if (parsed) {
         cart = parsed.cart || [];
         recommendation_reason = parsed.recommendation_reason || [];
         urgency_score = typeof parsed.urgency_score === 'number' ? parsed.urgency_score : 50;
@@ -642,9 +696,11 @@ Format:
           quantity: typeof item.quantity === 'number' ? item.quantity : 1,
           price: typeof item.price === 'number' ? item.price : parseFloat((Math.random() * 5 + 1.5).toFixed(2))
         }));
-      } catch (parseErr) {
-        console.error("Failed to parse Gemini response for generate-cart:", responseText, parseErr);
-        return res.status(500).json({ error: "Gemini returned invalid JSON structure." });
+      } else {
+        console.warn("Failed to extract JSON from Gemini response for generate-cart:", responseText);
+        cart = [];
+        recommendation_reason = ["Unable to auto-generate specific items, please pick from products catalog."];
+        urgency_score = 50;
       }
     }
 
