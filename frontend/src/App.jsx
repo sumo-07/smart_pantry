@@ -10,14 +10,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { db, useFirebase } from "./firebase";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { CartProvider } from "./context/CartContext";
 import { Loader2 } from "lucide-react";
 
 // Lazy load secondary/heavy routes for dynamic code splitting
-const AmazonNow = lazy(() => import("./pages/AmazonNow"));
-const Products = lazy(() => import("./pages/Products"));
-const Cart = lazy(() => import("./pages/Cart"));
-const Orders = lazy(() => import("./pages/Orders"));
 const Insights = lazy(() => import("./pages/Insights"));
 import { 
   doc, 
@@ -469,50 +464,6 @@ function AppContent() {
               } 
             />
 
-            <Route 
-              path="/amazon-now" 
-              element={
-                user ? (
-                  <AmazonNow />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
-            />
-
-            <Route 
-              path="/products" 
-              element={
-                user ? (
-                  <Products />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
-            />
-
-            <Route 
-              path="/cart" 
-              element={
-                user ? (
-                  <Cart />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
-            />
-
-            <Route 
-              path="/orders" 
-              element={
-                user ? (
-                  <Orders />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
-            />
-
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -526,11 +477,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </CartProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   );
 }
