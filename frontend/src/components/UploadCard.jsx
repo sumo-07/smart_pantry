@@ -1,11 +1,13 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, Image, X, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { compressImage } from "../utils/compressImage";
 
 export default function UploadCard({ onUpload, isLoading, scanType }) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDrag = (e) => {
@@ -35,18 +37,32 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
     }
   };
 
-  const processFile = (file) => {
+  const processFile = async (file) => {
     // Check if image
     if (!file.type.startsWith("image/")) {
       alert("Please upload an image file (PNG, JPG, JPEG).");
       return;
     }
-    setSelectedFile(file);
+
+    let fileToUse = file;
+    // Downscale and compress images > 1MB on client side
+    if (file.size > 1024 * 1024) {
+      setIsCompressing(true);
+      try {
+        fileToUse = await compressImage(file);
+      } catch (err) {
+        console.warn("Client compression failed, fallback to original:", err);
+      } finally {
+        setIsCompressing(false);
+      }
+    }
+
+    setSelectedFile(fileToUse);
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewUrl(reader.result);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToUse);
   };
 
   const clearSelection = () => {
@@ -55,10 +71,22 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleScanSubmit = (e) => {
+  const handleScanSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile) return;
-    onUpload(selectedFile);
+
+    let fileToUpload = selectedFile;
+    if (fileToUpload.size > 1024 * 1024) {
+      setIsCompressing(true);
+      try {
+        fileToUpload = await compressImage(fileToUpload);
+      } catch (err) {
+        console.warn("Compression before upload failed:", err);
+      } finally {
+        setIsCompressing(false);
+      }
+    }
+    onUpload(fileToUpload);
   };
 
   return (
@@ -138,10 +166,15 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={!selectedFile || isLoading}
+            disabled={!selectedFile || isLoading || isCompressing}
             className="flex-1 glow-btn inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
           >
-            {isLoading ? (
+            {isCompressing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Compressing image...
+              </>
+            ) : isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Analyzing with Gemini...

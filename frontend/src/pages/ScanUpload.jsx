@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Users, Camera, ArrowRight, Sparkles, CheckCircle2, ChevronRight, Info, AlertTriangle } from "lucide-react";
 import UploadCard from "../components/UploadCard";
 import { motion } from "framer-motion";
+import { compressImage } from "../utils/compressImage";
 
 export default function ScanUpload({ 
   familySize, 
@@ -34,8 +35,18 @@ export default function ScanUpload({
     setErrorMsg("");
     setScanResult(null);
     try {
+      // Compress and downscale camera/large images before uploading
+      let fileToUpload = file;
+      if (fileToUpload && fileToUpload.size > 1024 * 1024) {
+        try {
+          fileToUpload = await compressImage(fileToUpload);
+        } catch (compressionErr) {
+          console.warn("Image compression failed before upload, using original:", compressionErr);
+        }
+      }
+
       // Send image to backend
-      const result = await onScanImage(file, scanType);
+      const result = await onScanImage(fileToUpload, scanType);
       setScanResult(result);
       setShowPopup(true);
     } catch (err) {
