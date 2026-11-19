@@ -1,17 +1,13 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bot, LogOut, User, Menu, X, ShoppingCart, Package } from "lucide-react";
+import { Bot, LogOut, User, Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useCart } from "../context/CartContext";
 
 export default function Navbar({ familySize }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { cart } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const isActive = (path) => location.pathname === path;
 
@@ -93,42 +89,6 @@ export default function Navbar({ familySize }) {
               >
                 Insights
               </Link>
-              <Link
-                to="/amazon-now"
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-                  isActive("/amazon-now")
-                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                Amazon Now AI
-              </Link>
-              <Link
-                to="/products"
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-                  isActive("/products")
-                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                Products
-              </Link>
-              <Link
-                to="/cart"
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-1.5 ${
-                  isActive("/cart")
-                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <ShoppingCart className="h-4 w-4" />
-                Cart
-                {cartCount > 0 && (
-                  <span className="bg-amber-500 text-brand-dark text-[10px] font-black h-4.5 w-4.5 rounded-full flex items-center justify-center shrink-0">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
             </div>
           )}
 
@@ -157,18 +117,6 @@ export default function Navbar({ familySize }) {
                   </div>
                 )}
                 
-                <Link
-                  to="/orders"
-                  title="Order History"
-                  className={`p-2 rounded-xl transition cursor-pointer border shrink-0 ${
-                    isActive("/orders")
-                      ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/25"
-                      : "text-gray-400 hover:text-white hover:bg-white/5 border-transparent"
-                  }`}
-                >
-                  <Package className="h-4.5 w-4.5" />
-                </Link>
-
                 <button
                   onClick={handleLogout}
                   title="Sign Out"
@@ -248,50 +196,6 @@ export default function Navbar({ familySize }) {
                 }`}
               >
                 Insights
-              </Link>
-              <Link
-                to="/amazon-now"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2.5 rounded-xl text-base font-medium ${
-                  isActive("/amazon-now") ? "bg-indigo-500/10 text-indigo-400" : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                Amazon Now AI
-              </Link>
-              <Link
-                to="/products"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2.5 rounded-xl text-base font-medium ${
-                  isActive("/products") ? "bg-indigo-500/10 text-indigo-400" : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                Products
-              </Link>
-              <Link
-                to="/cart"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`px-3 py-2.5 rounded-xl text-base font-medium flex items-center gap-2 ${
-                  isActive("/cart") ? "bg-indigo-500/10 text-indigo-400" : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                <ShoppingCart className="h-5 w-5" />
-                Cart
-                {cartCount > 0 && (
-                  <span className="bg-amber-500 text-brand-dark text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center shrink-0">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-
-              <Link
-                to="/orders"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`px-3 py-2.5 rounded-xl text-base font-medium flex items-center gap-2 ${
-                  isActive("/orders") ? "bg-indigo-500/10 text-indigo-400" : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                <Package className="h-5 w-5" />
-                Orders
               </Link>
               
               <div className="border-t border-brand-border my-2 pt-2 px-3 flex items-center justify-between">

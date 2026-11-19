@@ -1,23 +1,16 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Camera, ShoppingBag, Zap, Home, ShoppingCart, Users, LayoutDashboard, Brain, Package } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { Camera, ShoppingBag, Home, Users, LayoutDashboard, Brain } from "lucide-react";
 
 export default function Sidebar({ familySize }) {
   const location = useLocation();
-  const { cart } = useCart();
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const menuItems = [
     { name: "Home", path: "/", icon: Home },
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Pantry Scanner", path: "/scan", icon: Camera },
     { name: "Shopping List", path: "/shopping-list", icon: ShoppingBag },
-    { name: "AI Insights", path: "/insights", icon: Brain },
-    { name: "Amazon Now AI", path: "/amazon-now", icon: Zap },
-    { name: "Products", path: "/products", icon: Package },
-    { name: "Cart", path: "/cart", icon: ShoppingCart },
-    { name: "Orders", path: "/orders", icon: Package }
+    { name: "AI Insights", path: "/insights", icon: Brain }
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -46,11 +39,6 @@ export default function Sidebar({ familySize }) {
                 <Icon className={`h-4.5 w-4.5 ${active ? "text-indigo-400" : "text-gray-400 group-hover:text-white"}`} />
                 {item.name}
               </div>
-              {item.path === "/cart" && cartCount > 0 && (
-                <span className="bg-amber-500 text-brand-dark text-[10px] font-black h-4.5 w-4.5 rounded-full flex items-center justify-center shrink-0">
-                  {cartCount}
-                </span>
-              )}
             </Link>
           );
         })}
