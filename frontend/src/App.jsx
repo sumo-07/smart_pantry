@@ -56,17 +56,22 @@ function AppContent() {
       setDbLoading(true);
       try {
         if (useFirebase) {
-          // 1. Fetch Family Size
-          const userDoc = await getDoc(doc(db, "users", userId));
+          // Fetch family size, scans, predictions, and shopping list in parallel
+          const [userDoc, scansSnap, predDoc, listDoc] = await Promise.all([
+            getDoc(doc(db, "users", userId)),
+            getDocs(query(collection(db, "scans"), where("userId", "==", userId))),
+            getDoc(doc(db, "predictions", userId)),
+            getDoc(doc(db, "shoppingLists", userId))
+          ]);
+
+          // 1. Process Family Size
           if (userDoc.exists()) {
             setFamilySize(userDoc.data().familySize);
           } else {
             setFamilySize(null);
           }
 
-          // 2. Fetch Scans
-          const scansQuery = query(collection(db, "scans"), where("userId", "==", userId));
-          const scansSnap = await getDocs(scansQuery);
+          // 2. Process Scans
           const loadedScans = [];
           scansSnap.forEach(doc => {
             loadedScans.push({ id: doc.id, ...doc.data() });
@@ -74,16 +79,14 @@ function AppContent() {
           loadedScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
           setScans(loadedScans);
 
-          // 3. Fetch Predictions
-          const predDoc = await getDoc(doc(db, "predictions", userId));
+          // 3. Process Predictions
           if (predDoc.exists()) {
             setPredictions(predDoc.data().predictions || []);
           } else {
             setPredictions([]);
           }
 
-          // 4. Fetch Shopping List
-          const listDoc = await getDoc(doc(db, "shoppingLists", userId));
+          // 4. Process Shopping List
           if (listDoc.exists()) {
             setShoppingList(listDoc.data().items || []);
           } else {
