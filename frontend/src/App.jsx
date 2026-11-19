@@ -31,7 +31,14 @@ function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const userId = user ? user.uid : null;
 
-  const [familySize, setFamilySize] = useState(null);
+  const [familySize, setFamilySize] = useState(() => {
+    try {
+      const cached = localStorage.getItem("pantry_global_familySize");
+      return cached ? parseInt(cached, 10) : null;
+    } catch {
+      return null;
+    }
+  });
   const [scans, setScans] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
@@ -49,6 +56,12 @@ function AppContent() {
       return;
     }
 
+    // Restore cached family size immediately to prevent screen flickers
+    const cachedUserFamilySize = localStorage.getItem(`pantry_familySize_${userId}`) || localStorage.getItem("pantry_global_familySize");
+    if (cachedUserFamilySize) {
+      setFamilySize(parseInt(cachedUserFamilySize, 10));
+    }
+
     async function loadData() {
       setDbLoading(true);
       try {
@@ -62,8 +75,13 @@ function AppContent() {
           ]);
 
           // 1. Process Family Size
-          if (userDoc.exists()) {
-            setFamilySize(userDoc.data().familySize);
+          if (userDoc.exists() && userDoc.data().familySize) {
+            const fs = userDoc.data().familySize;
+            setFamilySize(fs);
+            localStorage.setItem(`pantry_familySize_${userId}`, fs.toString());
+            localStorage.setItem("pantry_global_familySize", fs.toString());
+          } else if (cachedUserFamilySize) {
+            setFamilySize(parseInt(cachedUserFamilySize, 10));
           } else {
             setFamilySize(null);
           }
@@ -121,10 +139,10 @@ function AppContent() {
   const handleSaveFamilySize = async (size) => {
     setFamilySize(size);
     try {
+      localStorage.setItem(`pantry_familySize_${userId}`, size.toString());
+      localStorage.setItem("pantry_global_familySize", size.toString());
       if (useFirebase) {
-        await setDoc(doc(db, "users", userId), { familySize: size, userId });
-      } else {
-        localStorage.setItem(`pantry_familySize_${userId}`, size.toString());
+        await setDoc(doc(db, "users", userId), { familySize: size, userId }, { merge: true });
       }
     } catch (err) {
       console.error("Failed to save family size:", err);
