@@ -153,68 +153,35 @@ function AppContent() {
 
     const result = await response.json();
 
-    // If using LocalStorage fallback mode, simulate database write
-    let finalScans = [];
-    if (!useFirebase) {
-      const newScan = {
-        id: result.scanId || "scan_" + Date.now(),
-        userId,
-        timestamp: new Date().toISOString(),
-        scanType,
-        items: result.items
-      };
-      
-      finalScans = [...scans, newScan].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      setScans(finalScans);
-      localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(finalScans));
-    } else {
-      // Reload scans from Firestore
-      const scansQuery = query(collection(db, "scans"), where("userId", "==", userId));
-      const scansSnap = await getDocs(scansQuery);
-      finalScans = [];
-      scansSnap.forEach(doc => {
-        finalScans.push({ id: doc.id, ...doc.data() });
-      });
+    const newScan = {
+      id: result.scanId || "scan_" + Date.now(),
+      userId,
+      timestamp: result.timestamp || new Date().toISOString(),
+      scanType: result.scanType || scanType,
+      items: result.items || []
+    };
 
-      // If the newly created scan is missing due to index replication lag, manually inject it so the UI updates immediately
-      if (result.scanId && !finalScans.some(s => s.id === result.scanId)) {
-        finalScans.push({
-          id: result.scanId,
-          userId,
-          timestamp: new Date().toISOString(),
-          scanType,
-          items: result.items
-        });
-      }
+    const finalScans = [...scans, newScan].sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+    );
 
-      finalScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      setScans(finalScans);
+    // Atomic state update for scans, predictions, and shopping list
+    setScans(finalScans);
+    if (result.predictions) {
+      setPredictions(result.predictions);
+    }
+    if (result.shoppingList) {
+      setShoppingList(result.shoppingList);
     }
 
-    // Auto-trigger inventory comparison if we now have at least two scans
-    if (finalScans.length >= 2) {
-      if (scanType === "baseline") {
-        // A new baseline scan starts a new tracking cycle. Compare it to itself to reset predictions.
-        await handleCompare(result.scanId, result.scanId);
-      } else {
-        // Subsequent scan: compare against the latest baseline scan in history
-        let baselineScanId = null;
-        const currentScanId = result.scanId || finalScans[finalScans.length - 1].id;
-
-        // Find the latest baseline scan in history (excluding the current scan itself)
-        const baseScan = finalScans
-          .slice()
-          .reverse()
-          .find(s => s.scanType === "baseline" && s.id !== currentScanId);
-
-        if (baseScan) {
-          baselineScanId = baseScan.id;
-        } else {
-          // Fallback to second-to-last scan
-          baselineScanId = finalScans[finalScans.length - 2].id;
-        }
-
-        await handleCompare(baselineScanId, currentScanId);
+    // Persist to local storage if running in fallback mode
+    if (!useFirebase) {
+      localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(finalScans));
+      if (result.predictions) {
+        localStorage.setItem(`pantry_predictions_${userId}`, JSON.stringify(result.predictions));
+      }
+      if (result.shoppingList) {
+        localStorage.setItem(`pantry_shoppingList_${userId}`, JSON.stringify(result.shoppingList));
       }
     }
 
