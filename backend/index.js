@@ -105,18 +105,15 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
 
     let items = [];
 
-    // Fetch existing items for naming consistency
+    // Fetch existing items for naming consistency using O(1) inventory lookup
     let existingItemNames = [];
     try {
-      const scansRef = db.collection("scans");
-      const querySnapshot = await scansRef.where("userId", "==", userId).get();
-      const userScans = [];
-      querySnapshot.forEach(doc => {
-        userScans.push(doc.data());
-      });
-      if (userScans.length > 0) {
-        userScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        existingItemNames = userScans[0].items.map(item => item.name);
+      const inventoryDoc = await db.collection("inventories").doc(userId).get();
+      if (inventoryDoc.exists) {
+        const inventoryData = inventoryDoc.data();
+        if (Array.isArray(inventoryData?.items)) {
+          existingItemNames = inventoryData.items.map(item => item.name);
+        }
       }
     } catch (err) {
       console.error("Error fetching previous scan items for consistency:", err);
