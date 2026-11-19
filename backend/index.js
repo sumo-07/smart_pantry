@@ -81,6 +81,108 @@ function bufferToGenerativePart(buffer, mimeType) {
   };
 }
 
+/**
+ * Calculates consumption rates, days left, and depletion status
+ * by comparing a baseline scan with a current scan.
+ */
+function calculateConsumption(baselineScan, currentScan) {
+  const tBase = new Date(baselineScan.timestamp);
+  const tCurr = new Date(currentScan.timestamp);
+  let daysBetween = (tCurr - tBase) / (1000 * 60 * 60 * 24);
+
+  // Floor the days between scans to 0.1 to avoid infinity rates in quick hackathon tests
+  daysBetween = Math.max(daysBetween, 0.1);
+
+  const baseItemsMap = new Map((baselineScan.items || []).map(i => [i.name.toLowerCase(), i]));
+  const currItemsMap = new Map((currentScan.items || []).map(i => [i.name.toLowerCase(), i]));
+
+  const predictions = [];
+  const shoppingListItems = [];
+
+  // Track all unique item names
+  const allItemNames = new Set([
+    ...(baselineScan.items || []).map(i => i.name),
+    ...(currentScan.items || []).map(i => i.name)
+  ]);
+
+  for (const name of allItemNames) {
+    const nameKey = name.toLowerCase();
+    const baseItem = baseItemsMap.get(nameKey);
+    const currItem = currItemsMap.get(nameKey);
+
+    const baseQty = baseItem ? baseItem.quantity : 0;
+    const currQty = currItem ? currItem.quantity : 0;
+
+    // Calculate consumption rate
+    const consumed = Math.max(0, baseQty - currQty);
+    const dailyRate = Number((consumed / daysBetween).toFixed(2));
+
+    let daysLeft = null;
+    let status = "Healthy";
+
+    if (currQty === 0) {
+      daysLeft = 0;
+      status = "Critical";
+    } else if (dailyRate > 0) {
+      daysLeft = Number((currQty / dailyRate).toFixed(1));
+      if (daysLeft <= 1) {
+        status = "Critical";
+      } else if (daysLeft <= 3) {
+        status = "Low";
+      } else {
+        status = "Healthy";
+      }
+    } else {
+      daysLeft = Infinity;
+      status = "Healthy";
+    }
+
+    predictions.push({
+      name,
+      baselineQuantity: baseQty,
+      currentQuantity: currQty,
+      consumed,
+      dailyRate,
+      daysLeft: daysLeft === Infinity ? "N/A" : daysLeft,
+      status
+    });
+
+    // Add to shopping list if running low or critical
+    if (status === "Critical" || status === "Low") {
+      const quantityNeeded = Math.max(1, baseQty - currQty);
+      shoppingListItems.push({
+        name,
+        quantityNeeded,
+        checked: false
+      });
+    }
+  }
+
+  return {
+    daysBetweenScans: Number(daysBetween.toFixed(2)),
+    predictions,
+    shoppingList: shoppingListItems
+  };
+}
+
+/**
+ * Persists predictions and shopping list to Firestore.
+ */
+async function savePredictionsAndShoppingList(userId, predictions, shoppingList) {
+  const predDocRef = db.collection("predictions").doc(userId);
+  await predDocRef.set({
+    userId,
+    predictions,
+    updatedAt: new Date().toISOString()
+  });
+
+  const listDocRef = db.collection("shoppingLists").doc(userId);
+  await listDocRef.set({
+    userId,
+    items: shoppingList,
+    updatedAt: new Date().toISOString()
+  });
+}
 // ----------------------------------------------------
 // API ENDPOINTS
 // ----------------------------------------------------
@@ -94,7 +196,8 @@ app.get("/api/health", (req, res) => {
 
 /**
  * POST /api/scan
- * Uploads an image, analyzes it using Gemini Vision, and saves the scan list.
+ * Uploads an image, analyzes it using Gemini Vision, saves the scan list,
+ * and atomically calculates consumption comparison and updates predictions & shopping list.
  */
 app.post("/api/scan", upload.single("image"), async (req, res) => {
   try {
@@ -103,11 +206,19 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "Missing userId in request." });
     }
 
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided." });
+    }
+
     let items = [];
 
-    // Fetch existing items for naming consistency using O(1) inventory lookup
+    // Fetch existing items for naming consistency (O(1) lookup) and previous baseline scan
     let existingItemNames = [];
+    let previousBaselineScan = null;
+    let latestPreviousScan = null;
+
     try {
+      // 1. O(1) inventory lookup for naming consistency
       const inventoryDoc = await db.collection("inventories").doc(userId).get();
       if (inventoryDoc.exists) {
         const inventoryData = inventoryDoc.data();
@@ -115,12 +226,23 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
           existingItemNames = inventoryData.items.map(item => item.name);
         }
       }
-    } catch (err) {
-      console.error("Error fetching previous scan items for consistency:", err);
-    }
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No image file provided." });
+      // 2. Fetch baseline scan if subsequent scan
+      if (scanType === "subsequent") {
+        const scansRef = db.collection("scans");
+        const querySnapshot = await scansRef.where("userId", "==", userId).get();
+        const userScans = [];
+        querySnapshot.forEach(doc => {
+          userScans.push({ id: doc.id, ...doc.data() });
+        });
+        if (userScans.length > 0) {
+          userScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          latestPreviousScan = userScans[0];
+          previousBaselineScan = userScans.find(s => s.scanType === "baseline") || null;
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching previous scan items for consistency and baseline:", err);
     }
 
     if (!genAI) {
@@ -177,13 +299,15 @@ If you detect any of these items in the new image, you MUST use the exact same n
 
     // Save scan to scans collection
     const scanRef = db.collection("scans");
+    const timestamp = new Date().toISOString();
     const newScan = {
       userId,
-      timestamp: new Date().toISOString(),
+      timestamp,
       scanType,
       items
     };
     const docRef = await scanRef.add(newScan);
+    const createdScan = { id: docRef.id, ...newScan };
 
     // Save to inventories collection as current snapshot
     const inventoryRef = db.collection("inventories").doc(userId);
@@ -191,14 +315,35 @@ If you detect any of these items in the new image, you MUST use the exact same n
       userId,
       items,
       lastScanId: docRef.id,
-      updatedAt: new Date().toISOString(),
+      updatedAt: timestamp,
       scanType
     });
+
+    // Calculate consumption immediately for subsequent scan or reset for baseline scan
+    let predictions = [];
+    let shoppingList = [];
+
+    if (scanType === "subsequent") {
+      const baselineScan = previousBaselineScan || latestPreviousScan || createdScan;
+      const comparison = calculateConsumption(baselineScan, createdScan);
+      predictions = comparison.predictions;
+      shoppingList = comparison.shoppingList;
+      await savePredictionsAndShoppingList(userId, predictions, shoppingList);
+    } else {
+      // Baseline scan: initialize/reset predictions for new cycle (all healthy, empty shopping list)
+      const comparison = calculateConsumption(createdScan, createdScan);
+      predictions = comparison.predictions;
+      shoppingList = comparison.shoppingList;
+      await savePredictionsAndShoppingList(userId, predictions, shoppingList);
+    }
 
     res.json({
       scanId: docRef.id,
       scanType,
       items,
+      timestamp,
+      predictions,
+      shoppingList,
       message: "Scan processed and saved successfully."
     });
 
@@ -278,98 +423,13 @@ app.post("/api/compare", async (req, res) => {
       return res.status(404).json({ error: "Baseline or current scan not found." });
     }
 
-    const tBase = new Date(baselineScan.timestamp);
-    const tCurr = new Date(currentScan.timestamp);
-    let daysBetween = (tCurr - tBase) / (1000 * 60 * 60 * 24);
-
-    // Floor the days between scans to 0.1 to avoid infinity rates in quick hackathon tests
-    daysBetween = Math.max(daysBetween, 0.1);
-
-    const baseItemsMap = new Map(baselineScan.items.map(i => [i.name.toLowerCase(), i]));
-    const currItemsMap = new Map(currentScan.items.map(i => [i.name.toLowerCase(), i]));
-
-    const predictions = [];
-    const shoppingListItems = [];
-
-    // Track all unique item names
-    const allItemNames = new Set([
-      ...baselineScan.items.map(i => i.name),
-      ...currentScan.items.map(i => i.name)
-    ]);
-
-    for (const name of allItemNames) {
-      const nameKey = name.toLowerCase();
-      const baseItem = baseItemsMap.get(nameKey);
-      const currItem = currItemsMap.get(nameKey);
-
-      const baseQty = baseItem ? baseItem.quantity : 0;
-      const currQty = currItem ? currItem.quantity : 0;
-
-      // Calculate consumption rate
-      const consumed = Math.max(0, baseQty - currQty);
-      const dailyRate = Number((consumed / daysBetween).toFixed(2));
-
-      let daysLeft = null;
-      let status = "Healthy";
-
-      if (currQty === 0) {
-        daysLeft = 0;
-        status = "Critical";
-      } else if (dailyRate > 0) {
-        daysLeft = Number((currQty / dailyRate).toFixed(1));
-        if (daysLeft <= 1) {
-          status = "Critical";
-        } else if (daysLeft <= 3) {
-          status = "Low";
-        } else {
-          status = "Healthy";
-        }
-      } else {
-        daysLeft = Infinity;
-        status = "Healthy";
-      }
-
-      predictions.push({
-        name,
-        baselineQuantity: baseQty,
-        currentQuantity: currQty,
-        consumed,
-        dailyRate,
-        daysLeft: daysLeft === Infinity ? "N/A" : daysLeft,
-        status
-      });
-
-      // Add to shopping list if running low or critical
-      if (status === "Critical" || status === "Low") {
-        const quantityNeeded = Math.max(1, baseQty - currQty);
-        shoppingListItems.push({
-          name,
-          quantityNeeded,
-          checked: false
-        });
-      }
-    }
-
-    // Save predictions to database
-    const predDocRef = db.collection("predictions").doc(userId);
-    await predDocRef.set({
-      userId,
-      predictions,
-      updatedAt: new Date().toISOString()
-    });
-
-    // Save shopping list to database
-    const listDocRef = db.collection("shoppingLists").doc(userId);
-    await listDocRef.set({
-      userId,
-      items: shoppingListItems,
-      updatedAt: new Date().toISOString()
-    });
+    const { daysBetweenScans, predictions, shoppingList } = calculateConsumption(baselineScan, currentScan);
+    await savePredictionsAndShoppingList(userId, predictions, shoppingList);
 
     res.json({
-      daysBetweenScans: Number(daysBetween.toFixed(2)),
+      daysBetweenScans,
       predictions,
-      shoppingList: shoppingListItems
+      shoppingList
     });
 
   } catch (error) {
