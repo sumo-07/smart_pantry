@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { db } from "./firebase-config.js";
 // Firebase Admin SDK manages Firestore access
 
@@ -27,6 +27,50 @@ const genAI = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "your
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
+// Structured JSON schemas for Gemini calls
+const pantryScanSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    items: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          name: { type: SchemaType.STRING },
+          quantity: { type: SchemaType.INTEGER }
+        },
+        required: ["name", "quantity"]
+      }
+    }
+  },
+  required: ["items"]
+};
+
+const cartGenerationSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    scenario: { type: SchemaType.STRING },
+    cart: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          name: { type: SchemaType.STRING },
+          quantity: { type: SchemaType.INTEGER },
+          price: { type: SchemaType.NUMBER }
+        },
+        required: ["name", "quantity", "price"]
+      }
+    },
+    recommendation_reason: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING }
+    },
+    urgency_score: { type: SchemaType.INTEGER }
+  },
+  required: ["scenario", "cart", "recommendation_reason", "urgency_score"]
+};
+
 // Helper to convert buffer to generative part
 function bufferToGenerativePart(buffer, mimeType) {
   return {
@@ -35,16 +79,6 @@ function bufferToGenerativePart(buffer, mimeType) {
       mimeType
     }
   };
-}
-
-// Helper to sanitize Gemini response text by stripping Markdown wraps
-function cleanJSONResponse(text) {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/i, "");
-    cleaned = cleaned.replace(/\n?```$/, "");
-  }
-  return cleaned.trim();
 }
 
 /**
@@ -149,7 +183,6 @@ async function savePredictionsAndShoppingList(userId, predictions, shoppingList)
     updatedAt: new Date().toISOString()
   });
 }
-
 // ----------------------------------------------------
 // API ENDPOINTS
 // ----------------------------------------------------
@@ -179,23 +212,34 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
 
     let items = [];
 
-    // Fetch existing items for naming consistency and previous baseline scan
+    // Fetch existing items for naming consistency (O(1) lookup) and previous baseline scan
     let existingItemNames = [];
     let previousBaselineScan = null;
     let latestPreviousScan = null;
 
     try {
-      const scansRef = db.collection("scans");
-      const querySnapshot = await scansRef.where("userId", "==", userId).get();
-      const userScans = [];
-      querySnapshot.forEach(doc => {
-        userScans.push({ id: doc.id, ...doc.data() });
-      });
-      if (userScans.length > 0) {
-        userScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        existingItemNames = (userScans[0].items || []).map(item => item.name);
-        latestPreviousScan = userScans[0];
-        previousBaselineScan = userScans.find(s => s.scanType === "baseline") || null;
+      // 1. O(1) inventory lookup for naming consistency
+      const inventoryDoc = await db.collection("inventories").doc(userId).get();
+      if (inventoryDoc.exists) {
+        const inventoryData = inventoryDoc.data();
+        if (Array.isArray(inventoryData?.items)) {
+          existingItemNames = inventoryData.items.map(item => item.name);
+        }
+      }
+
+      // 2. Fetch baseline scan if subsequent scan
+      if (scanType === "subsequent") {
+        const scansRef = db.collection("scans");
+        const querySnapshot = await scansRef.where("userId", "==", userId).get();
+        const userScans = [];
+        querySnapshot.forEach(doc => {
+          userScans.push({ id: doc.id, ...doc.data() });
+        });
+        if (userScans.length > 0) {
+          userScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          latestPreviousScan = userScans[0];
+          previousBaselineScan = userScans.find(s => s.scanType === "baseline") || null;
+        }
       }
     } catch (err) {
       console.error("Error fetching previous scan items for consistency and baseline:", err);
@@ -212,7 +256,15 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
         { name: "Spinach", quantity: scanType === "baseline" ? 3 : 2 }
       ];
     } else {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: pantryScanSchema,
+          temperature: 0.1,
+          maxOutputTokens: 1024
+        }
+      });
       let prompt = `Analyze this fridge or pantry image.
 Identify visible grocery items.
 Estimate quantity.
@@ -233,14 +285,11 @@ If you detect any of these items in the new image, you MUST use the exact same n
       }
 
       const imagePart = bufferToGenerativePart(req.file.buffer, req.file.mimetype);
-      const result = await model.generateContent([prompt, imagePart], {
-        generationConfig: { responseMimeType: "application/json" }
-      });
+      const result = await model.generateContent([prompt, imagePart]);
 
       const responseText = result.response.text();
       try {
-        const cleanedText = cleanJSONResponse(responseText);
-        const parsed = JSON.parse(cleanedText);
+        const parsed = JSON.parse(responseText);
         items = parsed.items || [];
       } catch (parseErr) {
         console.error("Failed to parse Gemini response:", responseText, parseErr);
@@ -533,7 +582,15 @@ app.post("/api/amazon-now/generate-cart", async (req, res) => {
         urgency_score = 40;
       }
     } else {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: cartGenerationSchema,
+          temperature: 0.1,
+          maxOutputTokens: 1024
+        }
+      });
       const prompt = `Act as an Amazon Now quick-commerce shopping assistant.
 Given a real-life scenario, generate a practical, concise emergency shopping cart optimized for urgent delivery.
 
@@ -570,14 +627,11 @@ Format:
   "urgency_score": 95
 }`;
 
-      const result = await model.generateContent(prompt, {
-        generationConfig: { responseMimeType: "application/json" }
-      });
+      const result = await model.generateContent(prompt);
 
       const responseText = result.response.text();
       try {
-        const cleanedText = cleanJSONResponse(responseText);
-        const parsed = JSON.parse(cleanedText);
+        const parsed = JSON.parse(responseText);
         cart = parsed.cart || [];
         recommendation_reason = parsed.recommendation_reason || [];
         urgency_score = typeof parsed.urgency_score === 'number' ? parsed.urgency_score : 50;
@@ -665,7 +719,11 @@ app.get("/api/orders", async (req, res) => {
     }
 
     const ordersRef = db.collection("orders");
-    const querySnapshot = await ordersRef.where("userId", "==", userId).get();
+    const querySnapshot = await ordersRef
+      .where("userId", "==", userId)
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
 
     const orders = [];
     querySnapshot.forEach(doc => {
@@ -674,9 +732,6 @@ app.get("/api/orders", async (req, res) => {
         ...doc.data()
       });
     });
-
-    // Sort in-memory to avoid requiring a Firestore composite index
-    orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({
       userId,

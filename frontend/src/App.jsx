@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -6,17 +6,19 @@ import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import ScanUpload from "./pages/ScanUpload";
 import ShoppingList from "./pages/ShoppingList";
-import Insights from "./pages/Insights";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import AmazonNow from "./pages/AmazonNow";
-import Products from "./pages/Products";
-import Cart from "./pages/Cart";
-import Orders from "./pages/Orders";
 import { db, useFirebase } from "./firebase";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { Loader2 } from "lucide-react";
+
+// Lazy load secondary/heavy routes for dynamic code splitting
+const AmazonNow = lazy(() => import("./pages/AmazonNow"));
+const Products = lazy(() => import("./pages/Products"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Orders = lazy(() => import("./pages/Orders"));
+const Insights = lazy(() => import("./pages/Insights"));
 import { 
   doc, 
   setDoc, 
@@ -56,17 +58,22 @@ function AppContent() {
       setDbLoading(true);
       try {
         if (useFirebase) {
-          // 1. Fetch Family Size
-          const userDoc = await getDoc(doc(db, "users", userId));
+          // Fetch family size, scans, predictions, and shopping list in parallel
+          const [userDoc, scansSnap, predDoc, listDoc] = await Promise.all([
+            getDoc(doc(db, "users", userId)),
+            getDocs(query(collection(db, "scans"), where("userId", "==", userId))),
+            getDoc(doc(db, "predictions", userId)),
+            getDoc(doc(db, "shoppingLists", userId))
+          ]);
+
+          // 1. Process Family Size
           if (userDoc.exists()) {
             setFamilySize(userDoc.data().familySize);
           } else {
             setFamilySize(null);
           }
 
-          // 2. Fetch Scans
-          const scansQuery = query(collection(db, "scans"), where("userId", "==", userId));
-          const scansSnap = await getDocs(scansQuery);
+          // 2. Process Scans
           const loadedScans = [];
           scansSnap.forEach(doc => {
             loadedScans.push({ id: doc.id, ...doc.data() });
@@ -74,16 +81,14 @@ function AppContent() {
           loadedScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
           setScans(loadedScans);
 
-          // 3. Fetch Predictions
-          const predDoc = await getDoc(doc(db, "predictions", userId));
+          // 3. Process Predictions
           if (predDoc.exists()) {
             setPredictions(predDoc.data().predictions || []);
           } else {
             setPredictions([]);
           }
 
-          // 4. Fetch Shopping List
-          const listDoc = await getDoc(doc(db, "shoppingLists", userId));
+          // 4. Process Shopping List
           if (listDoc.exists()) {
             setShoppingList(listDoc.data().items || []);
           } else {
@@ -371,7 +376,15 @@ function AppContent() {
         {user && familySize && <Sidebar familySize={familySize} />}
 
         <main className="flex-1 overflow-y-auto">
-          <Routes>
+          <Suspense
+            fallback={
+              <div className="flex flex-col justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
+                <span className="text-xs text-gray-500 mt-2 font-semibold tracking-wider">LOADING...</span>
+              </div>
+            }
+          >
+            <Routes>
             {/* Landing Page - Accessible to everyone */}
             <Route path="/" element={<LandingPage userId={user && familySize ? userId : null} />} />
 
@@ -503,6 +516,7 @@ function AppContent() {
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
