@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -6,17 +6,19 @@ import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import ScanUpload from "./pages/ScanUpload";
 import ShoppingList from "./pages/ShoppingList";
-import Insights from "./pages/Insights";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import AmazonNow from "./pages/AmazonNow";
-import Products from "./pages/Products";
-import Cart from "./pages/Cart";
-import Orders from "./pages/Orders";
 import { db, useFirebase } from "./firebase";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { Loader2 } from "lucide-react";
+
+// Lazy load secondary/heavy routes for dynamic code splitting
+const AmazonNow = lazy(() => import("./pages/AmazonNow"));
+const Products = lazy(() => import("./pages/Products"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Orders = lazy(() => import("./pages/Orders"));
+const Insights = lazy(() => import("./pages/Insights"));
 import { 
   doc, 
   setDoc, 
@@ -404,7 +406,15 @@ function AppContent() {
         {user && familySize && <Sidebar familySize={familySize} />}
 
         <main className="flex-1 overflow-y-auto">
-          <Routes>
+          <Suspense
+            fallback={
+              <div className="flex flex-col justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
+                <span className="text-xs text-gray-500 mt-2 font-semibold tracking-wider">LOADING...</span>
+              </div>
+            }
+          >
+            <Routes>
             {/* Landing Page - Accessible to everyone */}
             <Route path="/" element={<LandingPage userId={user && familySize ? userId : null} />} />
 
@@ -536,6 +546,7 @@ function AppContent() {
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
