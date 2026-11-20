@@ -34,9 +34,9 @@ function AppContent() {
   const [familySize, setFamilySize] = useState(() => {
     try {
       const cached = localStorage.getItem("pantry_global_familySize");
-      return cached ? parseInt(cached, 10) : null;
+      return cached ? parseInt(cached, 10) : 4;
     } catch {
-      return null;
+      return 4;
     }
   });
   const [scans, setScans] = useState([]);
@@ -83,7 +83,9 @@ function AppContent() {
           } else if (cachedUserFamilySize) {
             setFamilySize(parseInt(cachedUserFamilySize, 10));
           } else {
-            setFamilySize(null);
+            setFamilySize(4);
+            localStorage.setItem(`pantry_familySize_${userId}`, "4");
+            localStorage.setItem("pantry_global_familySize", "4");
           }
 
           // 2. Process Scans
@@ -110,8 +112,13 @@ function AppContent() {
         } else {
           // LocalStorage fallback
           const localFamilySize = localStorage.getItem(`pantry_familySize_${userId}`);
-          if (localFamilySize) setFamilySize(parseInt(localFamilySize));
-          else setFamilySize(null);
+          if (localFamilySize) {
+            setFamilySize(parseInt(localFamilySize, 10));
+          } else {
+            setFamilySize(4);
+            localStorage.setItem(`pantry_familySize_${userId}`, "4");
+            localStorage.setItem("pantry_global_familySize", "4");
+          }
 
           const localScans = localStorage.getItem(`pantry_scans_${userId}`);
           if (localScans) setScans(JSON.parse(localScans));
@@ -150,13 +157,16 @@ function AppContent() {
   };
 
   // Handle Image Upload Scan
-  const handleScanImage = async (file, scanType) => {
+  const handleScanImage = async (file, scanType, baselineScanId = null) => {
     if (!userId) throw new Error("Please log in first.");
 
     const formData = new FormData();
     formData.append("image", file);
     formData.append("userId", userId);
     formData.append("scanType", scanType);
+    if (baselineScanId) {
+      formData.append("baselineScanId", baselineScanId);
+    }
 
     // Call backend API
     const response = await fetch(`${API_URL}/scan`, {
@@ -176,6 +186,7 @@ function AppContent() {
       userId,
       timestamp: result.timestamp || new Date().toISOString(),
       scanType: result.scanType || scanType,
+      baselineScanId: baselineScanId || null,
       items: result.items || []
     };
 
@@ -204,6 +215,54 @@ function AppContent() {
     }
 
     return result;
+  };
+
+  // Handle manual CRUD updates to scan items
+  const handleUpdateScanItems = async (scanId, updatedItems) => {
+    if (!userId) return;
+    try {
+      // 1. Optimistic local state update
+      setScans(prev =>
+        prev.map(s => (s.id === scanId ? { ...s, items: updatedItems } : s))
+      );
+
+      // 2. Persist to backend / Firestore
+      const res = await fetch(`${API_URL}/scans/${scanId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, items: updatedItems })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to update scan items.");
+      }
+
+      const data = await res.json();
+      if (data.predictions) {
+        setPredictions(data.predictions);
+      }
+      if (data.shoppingList) {
+        setShoppingList(data.shoppingList);
+      }
+
+      // 3. Fallback persistence
+      if (!useFirebase) {
+        const localScans = scans.map(s => s.id === scanId ? { ...s, items: updatedItems } : s);
+        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(localScans));
+        if (data.predictions) {
+          localStorage.setItem(`pantry_predictions_${userId}`, JSON.stringify(data.predictions));
+        }
+        if (data.shoppingList) {
+          localStorage.setItem(`pantry_shoppingList_${userId}`, JSON.stringify(data.shoppingList));
+        }
+      }
+
+      return data;
+    } catch (err) {
+      console.error("Error updating scan items:", err);
+      throw err;
+    }
   };
 
   // Handle Comparison and predictions
@@ -442,6 +501,7 @@ function AppContent() {
                     familySize={familySize}
                     onSaveFamilySize={handleSaveFamilySize}
                     onScanImage={handleScanImage}
+                    onUpdateScanItems={handleUpdateScanItems}
                     scans={scans}
                   />
                 ) : (

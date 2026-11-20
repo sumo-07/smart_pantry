@@ -1,14 +1,19 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, Image, X, Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { compressImage } from "../utils/compressImage";
 
-export default function UploadCard({ onUpload, isLoading, scanType }) {
+export default function UploadCard({ onUpload, isLoading, scanType, resetTrigger }) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Automatically clear image preview when scanType or resetTrigger changes
+  useEffect(() => {
+    clearSelection();
+  }, [scanType, resetTrigger]);
 
   const handleDrag = (e) => {
     e.preventDefault();
