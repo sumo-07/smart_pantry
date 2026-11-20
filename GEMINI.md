@@ -1,5 +1,16 @@
 # Workspace Rules
 
+## Pre-Implementation Options & User Decision Protocol
+
+1. **Mandatory Options Presentation**:
+   - Never unilaterally implement architectural changes, technical decisions, or significant fixes without prior consultation.
+   - For every situation, bug, or design choice:
+     - Clearly explain the situation, technical context, and root cause.
+     - Present distinct, actionable options with trade-offs.
+     - **Wait for the user's explicit choice** before writing or modifying code.
+2. **Scope**:
+   - This protocol is global, mandatory, and applies across all projects, repositories, and conversations.
+
 ## Git, Staging & Production Deployment Protocol
 
 1. **Branching Strategy (Always Branch off `staging`)**:
