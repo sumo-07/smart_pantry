@@ -249,8 +249,8 @@ export default function ScanUpload({
   };
 
   const handleSwitchToSubsequentMode = () => {
-    if (cycles.length === 0) {
-      alert("Please upload an initial baseline scan before uploading a follow-up scan.");
+    if (unfulfilledCycles.length === 0) {
+      alert("All existing baseline scans are already completed with a follow-up scan. Please start a New Baseline Scan to begin a fresh cycle.");
       return;
     }
     setScanType("subsequent");
@@ -462,23 +462,23 @@ export default function ScanUpload({
                   scanType === "subsequent"
                     ? "bg-amber-500/10 border-amber-500 text-white shadow-md shadow-amber-500/10"
                     : "bg-white/3 border-gray-800 text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                } ${!hasAnyBaseline ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                } ${unfulfilledCycles.length === 0 ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <div className="text-xs font-bold flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 text-amber-400" />
                   Follow-up Scan
                 </div>
                 <div className="text-[10px] text-gray-400 mt-1 leading-snug">
-                  Compares with earlier baseline scan to compute consumption.
+                  Compares with an in-progress baseline scan to complete cycle.
                 </div>
               </button>
             </div>
 
             {/* Baseline Target Selector when Subsequent Mode is selected */}
-            {scanType === "subsequent" && cycles.length > 0 && (
+            {scanType === "subsequent" && unfulfilledCycles.length > 0 && (
               <div className="pt-2 border-t border-gray-800 space-y-1.5">
                 <label htmlFor="baseline-picker" className="block text-[11px] font-semibold text-gray-300">
-                  Target Baseline to Compare Against:
+                  Select In-Progress Baseline to Complete:
                 </label>
                 <select
                   id="baseline-picker"
@@ -489,24 +489,11 @@ export default function ScanUpload({
                   }}
                   className="w-full bg-black/40 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition"
                 >
-                  {unfulfilledCycles.length > 0 && (
-                    <optgroup label="⚡ In-Progress Baselines (Awaiting Follow-up)">
-                      {unfulfilledCycles.map(c => (
-                        <option key={c.id} value={c.id}>
-                          Baseline • {formatDate(c.baselineScan.timestamp)} ({c.baselineScan.items?.length || 0} items)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {fulfilledCycles.length > 0 && (
-                    <optgroup label="✓ Previously Completed Cycles">
-                      {fulfilledCycles.map(c => (
-                        <option key={c.id} value={c.id}>
-                          Baseline • {formatDate(c.baselineScan.timestamp)} (Fulfilled)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {unfulfilledCycles.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Baseline • {formatDate(c.baselineScan.timestamp)} ({c.baselineScan.items?.length || 0} items)
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -812,7 +799,7 @@ export default function ScanUpload({
                               Cycle #{fulfilledCycles.length - index}
                             </h4>
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              Fulfilled ({cycle.followUpScans.length} follow-up{cycle.followUpScans.length > 1 ? "s" : ""})
+                              Fulfilled
                             </span>
                           </div>
                           <p className="text-[11px] text-gray-400 mt-0.5">
@@ -824,16 +811,8 @@ export default function ScanUpload({
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <button
                           type="button"
-                          onClick={() => handleSelectBaselineForFollowUp(cycle.id)}
-                          className="text-xs text-amber-400 hover:text-amber-300 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 transition cursor-pointer font-semibold"
-                          title="Add another follow-up scan to this cycle"
-                        >
-                          + Add Checkpoint
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => setExpandedCycleId(isExpanded ? null : cycle.id)}
-                          className="text-xs text-gray-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-gray-750 cursor-pointer"
+                          className="text-xs text-gray-400 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-gray-750 cursor-pointer"
                         >
                           <span>{isExpanded ? "Hide Details" : "View Items"}</span>
                           {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
