@@ -34,9 +34,9 @@ function AppContent() {
   const [familySize, setFamilySize] = useState(() => {
     try {
       const cached = localStorage.getItem("pantry_global_familySize");
-      return cached ? parseInt(cached, 10) : null;
+      return cached ? parseInt(cached, 10) : 4;
     } catch {
-      return null;
+      return 4;
     }
   });
   const [scans, setScans] = useState([]);
@@ -83,7 +83,9 @@ function AppContent() {
           } else if (cachedUserFamilySize) {
             setFamilySize(parseInt(cachedUserFamilySize, 10));
           } else {
-            setFamilySize(null);
+            setFamilySize(4);
+            localStorage.setItem(`pantry_familySize_${userId}`, "4");
+            localStorage.setItem("pantry_global_familySize", "4");
           }
 
           // 2. Process Scans
@@ -110,8 +112,13 @@ function AppContent() {
         } else {
           // LocalStorage fallback
           const localFamilySize = localStorage.getItem(`pantry_familySize_${userId}`);
-          if (localFamilySize) setFamilySize(parseInt(localFamilySize));
-          else setFamilySize(null);
+          if (localFamilySize) {
+            setFamilySize(parseInt(localFamilySize, 10));
+          } else {
+            setFamilySize(4);
+            localStorage.setItem(`pantry_familySize_${userId}`, "4");
+            localStorage.setItem("pantry_global_familySize", "4");
+          }
 
           const localScans = localStorage.getItem(`pantry_scans_${userId}`);
           if (localScans) setScans(JSON.parse(localScans));
@@ -150,13 +157,16 @@ function AppContent() {
   };
 
   // Handle Image Upload Scan
-  const handleScanImage = async (file, scanType) => {
+  const handleScanImage = async (file, scanType, baselineScanId = null) => {
     if (!userId) throw new Error("Please log in first.");
 
     const formData = new FormData();
     formData.append("image", file);
     formData.append("userId", userId);
     formData.append("scanType", scanType);
+    if (baselineScanId) {
+      formData.append("baselineScanId", baselineScanId);
+    }
 
     // Call backend API
     const response = await fetch(`${API_URL}/scan`, {
@@ -176,6 +186,7 @@ function AppContent() {
       userId,
       timestamp: result.timestamp || new Date().toISOString(),
       scanType: result.scanType || scanType,
+      baselineScanId: baselineScanId || null,
       items: result.items || []
     };
 
@@ -204,6 +215,76 @@ function AppContent() {
     }
 
     return result;
+  };
+
+  // Handle manual CRUD updates to scan items via backend
+  const handleUpdateScanItems = async (scanId, updatedItems) => {
+    if (!userId) return;
+    try {
+      // 1. Call backend endpoint as sole authoritative source
+      const res = await fetch(`${API_URL}/scans/${scanId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, items: updatedItems })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to update scan items on server.");
+      }
+
+      const data = await res.json();
+
+      // 2. Update frontend state
+      setScans(prev =>
+        prev.map(s => (s.id === scanId ? { ...s, items: data.items || updatedItems } : s))
+      );
+      if (data.predictions) {
+        setPredictions(data.predictions);
+      }
+      if (data.shoppingList) {
+        setShoppingList(data.shoppingList);
+      }
+
+      // 3. Fallback localStorage update
+      if (!useFirebase) {
+        const localScans = scans.map(s => s.id === scanId ? { ...s, items: data.items || updatedItems } : s);
+        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(localScans));
+      }
+
+      return data;
+    } catch (err) {
+      console.error("Error updating scan items:", err);
+      throw err;
+    }
+  };
+
+  // Handle deleting a scan via backend
+  const handleDeleteScan = async (scanId) => {
+    if (!userId) return;
+    try {
+      // 1. Call backend endpoint as sole authoritative source
+      const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to delete scan on server.");
+      }
+
+      // 2. On server success, update frontend state
+      const updatedScans = scans.filter(s => s.id !== scanId);
+      setScans(updatedScans);
+
+      // 3. Fallback localStorage update
+      if (!useFirebase) {
+        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(updatedScans));
+      }
+    } catch (err) {
+      console.error("Error deleting scan:", err);
+      throw err;
+    }
   };
 
   // Handle Comparison and predictions
@@ -442,6 +523,8 @@ function AppContent() {
                     familySize={familySize}
                     onSaveFamilySize={handleSaveFamilySize}
                     onScanImage={handleScanImage}
+                    onUpdateScanItems={handleUpdateScanItems}
+                    onDeleteScan={handleDeleteScan}
                     scans={scans}
                   />
                 ) : (
