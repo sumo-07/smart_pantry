@@ -21,7 +21,8 @@ import {
   getDocs, 
   collection, 
   query, 
-  where
+  where,
+  deleteDoc
 } from "firebase/firestore";
 
 // Base API URL from environment variables or default to localhost
@@ -226,39 +227,44 @@ function AppContent() {
         prev.map(s => (s.id === scanId ? { ...s, items: updatedItems } : s))
       );
 
-      // 2. Persist to backend / Firestore
-      const res = await fetch(`${API_URL}/scans/${scanId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, items: updatedItems })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to update scan items.");
+      // 2. Direct Firestore update if available
+      if (useFirebase && db) {
+        try {
+          await setDoc(doc(db, "scans", scanId), { 
+            items: updatedItems, 
+            updatedAt: new Date().toISOString() 
+          }, { merge: true });
+        } catch (fbErr) {
+          console.warn("Direct Firestore update failed, relying on backend:", fbErr);
+        }
       }
 
-      const data = await res.json();
-      if (data.predictions) {
-        setPredictions(data.predictions);
-      }
-      if (data.shoppingList) {
-        setShoppingList(data.shoppingList);
+      // 3. Persist to backend
+      try {
+        const res = await fetch(`${API_URL}/scans/${scanId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, items: updatedItems })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.predictions) {
+            setPredictions(data.predictions);
+          }
+          if (data.shoppingList) {
+            setShoppingList(data.shoppingList);
+          }
+        }
+      } catch (backendErr) {
+        console.warn("Backend update endpoint call failed:", backendErr);
       }
 
-      // 3. Fallback persistence
+      // 4. Fallback persistence
       if (!useFirebase) {
         const localScans = scans.map(s => s.id === scanId ? { ...s, items: updatedItems } : s);
         localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(localScans));
-        if (data.predictions) {
-          localStorage.setItem(`pantry_predictions_${userId}`, JSON.stringify(data.predictions));
-        }
-        if (data.shoppingList) {
-          localStorage.setItem(`pantry_shoppingList_${userId}`, JSON.stringify(data.shoppingList));
-        }
       }
-
-      return data;
     } catch (err) {
       console.error("Error updating scan items:", err);
       throw err;
@@ -269,20 +275,35 @@ function AppContent() {
   const handleDeleteScan = async (scanId) => {
     if (!userId) return;
     try {
+      // 1. Optimistic state update
       const updatedScans = scans.filter(s => s.id !== scanId);
       setScans(updatedScans);
 
-      const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
-        method: "DELETE"
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to delete scan.");
+      // 2. Direct client-side Firestore deletion if available
+      if (useFirebase && db) {
+        try {
+          await deleteDoc(doc(db, "scans", scanId));
+        } catch (fbErr) {
+          console.warn("Direct Firestore scan deletion failed, relying on backend:", fbErr);
+        }
       }
 
+      // 3. Fallback localStorage update
       if (!useFirebase) {
         localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(updatedScans));
+      }
+
+      // 4. Backend endpoint call
+      try {
+        const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
+          method: "DELETE"
+        });
+        if (!res.ok && res.status !== 404) {
+          const errData = await res.json().catch(() => ({}));
+          console.warn("Backend DELETE /api/scans/:id returned:", errData);
+        }
+      } catch (backendErr) {
+        console.warn("Backend scan deletion call failed:", backendErr);
       }
     } catch (err) {
       console.error("Error deleting scan:", err);
