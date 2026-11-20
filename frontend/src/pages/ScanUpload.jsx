@@ -142,7 +142,7 @@ export default function ScanUpload({
     setSaveSuccessMsg("");
     try {
       let fileToUpload = file;
-      if (fileToUpload && fileToUpload.size > 1024 * 1024) {
+      if (fileToUpload && fileToUpload.size > 3 * 1024 * 1024) {
         try {
           fileToUpload = await compressImage(fileToUpload);
         } catch (compressionErr) {
