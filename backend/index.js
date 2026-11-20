@@ -382,6 +382,7 @@ If you detect any of these items in the new image, you MUST use the exact same n
     res.json({
       scanId: docRef.id,
       scanType,
+      baselineScanId: resolvedBaselineScanId,
       items,
       timestamp,
       predictions,
@@ -414,6 +415,9 @@ app.put("/api/scans/:id", async (req, res) => {
     }
 
     const scanData = scanDoc.data();
+    if (scanData.userId !== userId) {
+      return res.status(403).json({ error: "Unauthorized: Scan does not belong to user." });
+    }
     const sanitizedItems = items
       .map(item => ({
         name: String(item.name || "").trim(),
@@ -454,8 +458,22 @@ app.put("/api/scans/:id", async (req, res) => {
 
       if (userScans.length >= 2) {
         userScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        const baseScan = userScans.find(s => s.scanType === "baseline");
-        const currScan = userScans.filter(s => s.scanType === "subsequent").pop() || userScans[userScans.length - 1];
+        let baseScan = null;
+        let currScan = null;
+
+        if (scanData.scanType === "subsequent" && scanData.baselineScanId) {
+          baseScan = userScans.find(s => s.id === scanData.baselineScanId);
+          currScan = userScans.find(s => s.id === id);
+        } else if (scanData.scanType === "baseline") {
+          baseScan = userScans.find(s => s.id === id);
+          currScan = userScans.find(s => s.baselineScanId === id) || userScans.filter(s => s.scanType === "subsequent").pop();
+        }
+
+        if (!baseScan || !currScan) {
+          baseScan = userScans.find(s => s.scanType === "baseline");
+          currScan = userScans.filter(s => s.scanType === "subsequent").pop() || userScans[userScans.length - 1];
+        }
+
         if (baseScan && currScan && baseScan.id !== currScan.id) {
           const comp = calculateConsumption(baseScan, currScan);
           predictions = comp.predictions;
