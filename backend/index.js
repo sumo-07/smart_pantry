@@ -500,6 +500,72 @@ app.put("/api/scans/:id", async (req, res) => {
 });
 
 /**
+ * DELETE /api/scans/:id
+ * Deletes a scan (e.g. an uncompleted cycle) and synchronizes inventories.
+ */
+app.delete("/api/scans/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.query.userId || req.body?.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId." });
+    }
+
+    const scanDocRef = db.collection("scans").doc(id);
+    const scanDoc = await scanDocRef.get();
+    if (!scanDoc.exists) {
+      return res.status(404).json({ error: "Scan not found." });
+    }
+
+    const scanData = scanDoc.data();
+    if (scanData.userId !== userId) {
+      return res.status(403).json({ error: "Unauthorized: Scan does not belong to user." });
+    }
+
+    // Delete scan document
+    await scanDocRef.delete();
+
+    // Check if this scan was the latest snapshot in inventories
+    const inventoryDocRef = db.collection("inventories").doc(userId);
+    const invDoc = await inventoryDocRef.get();
+    if (invDoc.exists && invDoc.data().lastScanId === id) {
+      const remainingSnap = await db.collection("scans").where("userId", "==", userId).get();
+      const remainingScans = [];
+      remainingSnap.forEach(d => remainingScans.push({ id: d.id, ...d.data() }));
+      remainingScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      if (remainingScans.length > 0) {
+        const latest = remainingScans[0];
+        await inventoryDocRef.set({
+          userId,
+          items: latest.items || [],
+          lastScanId: latest.id,
+          updatedAt: new Date().toISOString(),
+          scanType: latest.scanType
+        });
+      } else {
+        await inventoryDocRef.set({
+          userId,
+          items: [],
+          lastScanId: null,
+          updatedAt: new Date().toISOString(),
+          scanType: null
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      scanId: id,
+      message: "Scan deleted successfully."
+    });
+  } catch (error) {
+    console.error("Error in DELETE /api/scans/:id:", error);
+    res.status(500).json({ error: error.message || "Failed to delete scan." });
+  }
+});
+
+/**
  * POST /api/compare
  * Compares a baseline scan and a current scan, calculates consumption,
  * and updates predictions & shopping list.

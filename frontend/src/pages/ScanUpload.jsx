@@ -32,6 +32,7 @@ export default function ScanUpload({
   onSaveFamilySize, 
   onScanImage, 
   onUpdateScanItems,
+  onDeleteScan,
   scans = [] 
 }) {
   // Household configuration modal
@@ -51,10 +52,12 @@ export default function ScanUpload({
   const [showPopup, setShowPopup] = useState(false);
   const [resetTrigger, setResetTrigger] = useState(0);
 
-  // Cycle navigation
+  // Cycle navigation & deletion
   const [activeCycleView, setActiveCycleView] = useState("uncompleted"); // "uncompleted" or "fulfilled"
   const [expandedCycleId, setExpandedCycleId] = useState(null);
   const [selectedBaselineId, setSelectedBaselineId] = useState("");
+  const [cycleToDelete, setCycleToDelete] = useState(null);
+  const [isDeletingCycle, setIsDeletingCycle] = useState(false);
 
   // Group all scans chronologically into tracking cycles
   // Every baseline scan represents a cycle; follow-ups pair either explicitly or chronologically
@@ -238,6 +241,24 @@ export default function ScanUpload({
     // Clear previous image preview
     setResetTrigger(prev => prev + 1);
     window.scrollTo({ top: 120, behavior: "smooth" });
+  };
+
+  const handleConfirmDeleteCycle = async () => {
+    if (!cycleToDelete) return;
+    setIsDeletingCycle(true);
+    try {
+      if (onDeleteScan) {
+        await onDeleteScan(cycleToDelete.id);
+      }
+      if (selectedBaselineId === cycleToDelete.id) {
+        setSelectedBaselineId("");
+      }
+      setCycleToDelete(null);
+    } catch (err) {
+      alert("Failed to delete cycle: " + (err.message || "Server error"));
+    } finally {
+      setIsDeletingCycle(false);
+    }
   };
 
   const handleSwitchToBaselineMode = () => {
@@ -751,14 +772,26 @@ export default function ScanUpload({
                         Upload a follow-up image to compare against this specific baseline.
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() => handleSelectBaselineForFollowUp(cycle.id)}
-                        className="glow-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-amber-500 text-black hover:bg-amber-400 transition cursor-pointer font-bold shadow"
-                      >
-                        <Camera className="h-3.5 w-3.5" />
-                        Pair with Follow-up Scan
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCycleToDelete(cycle)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition cursor-pointer"
+                          title="Delete this in-progress baseline cycle"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete Cycle
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectBaselineForFollowUp(cycle.id)}
+                          className="glow-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-amber-500 text-black hover:bg-amber-400 transition cursor-pointer font-bold shadow"
+                        >
+                          <Camera className="h-3.5 w-3.5" />
+                          Pair with Follow-up Scan
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -863,6 +896,47 @@ export default function ScanUpload({
           </div>
         )}
       </div>
+
+      {/* Delete Cycle Confirmation Modal */}
+      {cycleToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel rounded-3xl p-6 sm:p-7 max-w-sm w-full text-center space-y-4 shadow-2xl border border-rose-500/25"
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-white">Delete In-Progress Cycle?</h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                This will permanently remove the baseline scan captured on{" "}
+                <strong className="text-white">{formatDate(cycleToDelete.baselineScan?.timestamp)}</strong>.
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button 
+                type="button"
+                onClick={() => setCycleToDelete(null)}
+                disabled={isDeletingCycle}
+                className="flex-1 py-2 text-xs font-semibold rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-gray-750 cursor-pointer transition"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={handleConfirmDeleteCycle}
+                disabled={isDeletingCycle}
+                className="flex-1 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/25 cursor-pointer font-bold transition"
+              >
+                {isDeletingCycle ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Completion Modal Popup */}
       {showPopup && (

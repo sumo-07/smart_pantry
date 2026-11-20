@@ -265,6 +265,31 @@ function AppContent() {
     }
   };
 
+  // Handle deleting a scan (e.g. an uncompleted baseline cycle)
+  const handleDeleteScan = async (scanId) => {
+    if (!userId) return;
+    try {
+      const updatedScans = scans.filter(s => s.id !== scanId);
+      setScans(updatedScans);
+
+      const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to delete scan.");
+      }
+
+      if (!useFirebase) {
+        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(updatedScans));
+      }
+    } catch (err) {
+      console.error("Error deleting scan:", err);
+      throw err;
+    }
+  };
+
   // Handle Comparison and predictions
   const handleCompare = async (baselineScanId = null, currentScanId = null) => {
     if (!userId) return;
@@ -502,6 +527,7 @@ function AppContent() {
                     onSaveFamilySize={handleSaveFamilySize}
                     onScanImage={handleScanImage}
                     onUpdateScanItems={handleUpdateScanItems}
+                    onDeleteScan={handleDeleteScan}
                     scans={scans}
                   />
                 ) : (
