@@ -21,8 +21,7 @@ import {
   getDocs, 
   collection, 
   query, 
-  where,
-  deleteDoc
+  where
 } from "firebase/firestore";
 
 // Base API URL from environment variables or default to localhost
@@ -218,92 +217,69 @@ function AppContent() {
     return result;
   };
 
-  // Handle manual CRUD updates to scan items
+  // Handle manual CRUD updates to scan items via backend
   const handleUpdateScanItems = async (scanId, updatedItems) => {
     if (!userId) return;
     try {
-      // 1. Optimistic local state update
+      // 1. Call backend endpoint as sole authoritative source
+      const res = await fetch(`${API_URL}/scans/${scanId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, items: updatedItems })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to update scan items on server.");
+      }
+
+      const data = await res.json();
+
+      // 2. Update frontend state
       setScans(prev =>
-        prev.map(s => (s.id === scanId ? { ...s, items: updatedItems } : s))
+        prev.map(s => (s.id === scanId ? { ...s, items: data.items || updatedItems } : s))
       );
-
-      // 2. Direct Firestore update if available
-      if (useFirebase && db) {
-        try {
-          await setDoc(doc(db, "scans", scanId), { 
-            items: updatedItems, 
-            updatedAt: new Date().toISOString() 
-          }, { merge: true });
-        } catch (fbErr) {
-          console.warn("Direct Firestore update failed, relying on backend:", fbErr);
-        }
+      if (data.predictions) {
+        setPredictions(data.predictions);
+      }
+      if (data.shoppingList) {
+        setShoppingList(data.shoppingList);
       }
 
-      // 3. Persist to backend
-      try {
-        const res = await fetch(`${API_URL}/scans/${scanId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, items: updatedItems })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.predictions) {
-            setPredictions(data.predictions);
-          }
-          if (data.shoppingList) {
-            setShoppingList(data.shoppingList);
-          }
-        }
-      } catch (backendErr) {
-        console.warn("Backend update endpoint call failed:", backendErr);
-      }
-
-      // 4. Fallback persistence
+      // 3. Fallback localStorage update
       if (!useFirebase) {
-        const localScans = scans.map(s => s.id === scanId ? { ...s, items: updatedItems } : s);
+        const localScans = scans.map(s => s.id === scanId ? { ...s, items: data.items || updatedItems } : s);
         localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(localScans));
       }
+
+      return data;
     } catch (err) {
       console.error("Error updating scan items:", err);
       throw err;
     }
   };
 
-  // Handle deleting a scan (e.g. an uncompleted baseline cycle)
+  // Handle deleting a scan via backend
   const handleDeleteScan = async (scanId) => {
     if (!userId) return;
     try {
-      // 1. Optimistic state update
+      // 1. Call backend endpoint as sole authoritative source
+      const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to delete scan on server.");
+      }
+
+      // 2. On server success, update frontend state
       const updatedScans = scans.filter(s => s.id !== scanId);
       setScans(updatedScans);
-
-      // 2. Direct client-side Firestore deletion if available
-      if (useFirebase && db) {
-        try {
-          await deleteDoc(doc(db, "scans", scanId));
-        } catch (fbErr) {
-          console.warn("Direct Firestore scan deletion failed, relying on backend:", fbErr);
-        }
-      }
 
       // 3. Fallback localStorage update
       if (!useFirebase) {
         localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(updatedScans));
-      }
-
-      // 4. Backend endpoint call
-      try {
-        const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
-          method: "DELETE"
-        });
-        if (!res.ok && res.status !== 404) {
-          const errData = await res.json().catch(() => ({}));
-          console.warn("Backend DELETE /api/scans/:id returned:", errData);
-        }
-      } catch (backendErr) {
-        console.warn("Backend scan deletion call failed:", backendErr);
       }
     } catch (err) {
       console.error("Error deleting scan:", err);
