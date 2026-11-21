@@ -26,6 +26,7 @@ import {
 import UploadCard from "../components/UploadCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { compressImage } from "../utils/compressImage";
+import { areItemsIdentical } from "../utils/itemNormalizer";
 
 export default function ScanUpload({ 
   familySize = 4, 
@@ -141,7 +142,7 @@ export default function ScanUpload({
     setSaveSuccessMsg("");
     try {
       let fileToUpload = file;
-      if (fileToUpload && fileToUpload.size > 1024 * 1024) {
+      if (fileToUpload && fileToUpload.size > 3 * 1024 * 1024) {
         try {
           fileToUpload = await compressImage(fileToUpload);
         } catch (compressionErr) {
@@ -173,8 +174,8 @@ export default function ScanUpload({
     if (!name) return;
     const qty = Math.max(1, parseInt(newItemQty, 10) || 1);
 
-    // If item already exists, increase quantity
-    const existingIndex = editableItems.findIndex(i => i.name.toLowerCase() === name.toLowerCase());
+    // If item already exists or shares identical product identity, increase quantity
+    const existingIndex = editableItems.findIndex(i => areItemsIdentical(i.name, name));
     if (existingIndex !== -1) {
       const updated = [...editableItems];
       updated[existingIndex].quantity += qty;

@@ -5,17 +5,17 @@
  *
  * @param {File|Blob} file - The original image file to compress.
  * @param {Object} [options]
- * @param {number} [options.maxDimension=1280] - Maximum width or height in pixels.
- * @param {number} [options.quality=0.8] - JPEG quality between 0 and 1.
- * @param {number} [options.maxSizeThreshold=1048576] - Size threshold in bytes (default 1MB).
+ * @param {number} [options.maxDimension=1920] - Maximum width or height in pixels (Full HD).
+ * @param {number} [options.quality=0.90] - JPEG quality between 0 and 1.
+ * @param {number} [options.maxSizeThreshold=3145728] - Size threshold in bytes (default 3MB).
  * @param {boolean} [options.force=false] - If true, compress even if below size threshold and dimensions.
  * @returns {Promise<File|Blob>} The compressed image File (or Blob).
  */
 export async function compressImage(file, options = {}) {
   const {
-    maxDimension = 1280,
-    quality = 0.8,
-    maxSizeThreshold = 1024 * 1024, // 1MB
+    maxDimension = 1920,
+    quality = 0.90,
+    maxSizeThreshold = 3 * 1024 * 1024, // 3MB threshold
     force = false
   } = options;
 

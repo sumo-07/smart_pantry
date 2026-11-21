@@ -50,8 +50,8 @@ export default function UploadCard({ onUpload, isLoading, scanType, resetTrigger
     }
 
     let fileToUse = file;
-    // Downscale and compress images > 1MB on client side
-    if (file.size > 1024 * 1024) {
+    // Downscale and compress images > 3MB or > 1920px on client side
+    if (file.size > 3 * 1024 * 1024) {
       setIsCompressing(true);
       try {
         fileToUse = await compressImage(file);
@@ -81,7 +81,7 @@ export default function UploadCard({ onUpload, isLoading, scanType, resetTrigger
     if (!selectedFile) return;
 
     let fileToUpload = selectedFile;
-    if (fileToUpload.size > 1024 * 1024) {
+    if (fileToUpload.size > 3 * 1024 * 1024) {
       setIsCompressing(true);
       try {
         fileToUpload = await compressImage(fileToUpload);
