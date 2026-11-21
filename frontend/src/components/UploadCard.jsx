@@ -1,14 +1,19 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, Image, X, Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { compressImage } from "../utils/compressImage";
 
-export default function UploadCard({ onUpload, isLoading, scanType }) {
+export default function UploadCard({ onUpload, isLoading, scanType, resetTrigger }) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Automatically clear image preview when scanType or resetTrigger changes
+  useEffect(() => {
+    clearSelection();
+  }, [scanType, resetTrigger]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -45,8 +50,8 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
     }
 
     let fileToUse = file;
-    // Downscale and compress images > 1MB on client side
-    if (file.size > 1024 * 1024) {
+    // Downscale and compress images > 3MB or > 1920px on client side
+    if (file.size > 3 * 1024 * 1024) {
       setIsCompressing(true);
       try {
         fileToUse = await compressImage(file);
@@ -76,7 +81,7 @@ export default function UploadCard({ onUpload, isLoading, scanType }) {
     if (!selectedFile) return;
 
     let fileToUpload = selectedFile;
-    if (fileToUpload.size > 1024 * 1024) {
+    if (fileToUpload.size > 3 * 1024 * 1024) {
       setIsCompressing(true);
       try {
         fileToUpload = await compressImage(fileToUpload);

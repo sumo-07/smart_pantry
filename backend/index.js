@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import multer from "multer";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { db } from "./firebase-config.js";
+import { consolidateDetectedItems } from "./utils/itemNormalizer.js";
 // Firebase Admin SDK manages Firestore access
 
 dotenv.config();
@@ -226,7 +227,7 @@ app.get("/api/health", (req, res) => {
  */
 app.post("/api/scan", upload.single("image"), async (req, res) => {
   try {
-    const { userId, scanType } = req.body; // scanType: "baseline" or "subsequent"
+    const { userId, scanType, baselineScanId } = req.body; // scanType: "baseline" or "subsequent"
     if (!userId) {
       return res.status(400).json({ error: "Missing userId in request." });
     }
@@ -263,7 +264,18 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
         if (userScans.length > 0) {
           userScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           latestPreviousScan = userScans[0];
-          previousBaselineScan = userScans.find(s => s.scanType === "baseline") || null;
+          if (baselineScanId) {
+            previousBaselineScan = userScans.find(s => s.id === baselineScanId) || null;
+            if (!previousBaselineScan) {
+              const specificDoc = await scansRef.doc(baselineScanId).get();
+              if (specificDoc.exists) {
+                previousBaselineScan = { id: specificDoc.id, ...specificDoc.data() };
+              }
+            }
+          }
+          if (!previousBaselineScan) {
+            previousBaselineScan = userScans.find(s => s.scanType === "baseline") || null;
+          }
         }
       }
     } catch (err) {
@@ -273,13 +285,14 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     if (!genAI) {
       console.warn("GEMINI_API_KEY is not set or invalid. Using simulated image analysis.");
       // Simulated items for testing without API key
-      items = [
+      const simulatedItems = [
         { name: "Eggs", quantity: scanType === "baseline" ? 12 : 4 },
         { name: "Milk", quantity: scanType === "baseline" ? 4 : 1 },
         { name: "Bread", quantity: scanType === "baseline" ? 2 : 0 },
         { name: "Tomatoes", quantity: scanType === "baseline" ? 8 : 3 },
         { name: "Spinach", quantity: scanType === "baseline" ? 3 : 2 }
       ];
+      items = consolidateDetectedItems(simulatedItems, existingItemNames);
     } else {
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
@@ -287,26 +300,31 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
           responseMimeType: "application/json",
           responseSchema: pantryScanSchema,
           temperature: 0.1,
-          maxOutputTokens: 1024
+          maxOutputTokens: 4096
         }
       });
-      let prompt = `Analyze this fridge or pantry image.
-Identify visible grocery items.
-Estimate quantity.
-Return JSON only.
-Format:
+      let prompt = `You are an expert inventory auditor. Perform an exhaustive visual scan of whatever storage space, container, surface, or environment is shown in this image, regardless of its type, location, or layout.
+
+MANDATORY SCANNING INSTRUCTIONS:
+1. SPATIAL SWEEP: Systematically inspect all visible areas, surfaces, levels, rows, tiers, compartments, and containers across the entire frame from TOP to BOTTOM and LEFT to RIGHT.
+2. EXHAUSTIVE DETECTION: Do NOT summarize, stop early, or limit detection to prominent foreground items. Detect EVERY visible, identifiable food, beverage, grocery, or packaged product anywhere in the image.
+3. DISTINCT IDENTITIES: Differentiate separate product varieties, flavors, and brands (e.g., "ProV Cashew" vs "Nutraj Cashews", "Whole Milk" vs "Skim Milk", "California Inshell Walnuts" vs "Walnut Kernels").
+4. ACCURATE COUNTS: For each product, count all identical units visibly present. If items are stacked behind or arranged side-by-side, estimate the total visible count.
+5. CLEAN NAMING: Use concise, professional product titles (e.g., "California Inshell Walnuts", "ProV Jumbo Cashews", "Eggs", "Cheddar Cheese").
+
+Return JSON only matching the schema:
 {
   "items": [
     {
-      "name": "Eggs",
-      "quantity": 12
+      "name": "Exact Product Name",
+      "quantity": 1
     }
   ]
 }`;
 
       if (existingItemNames.length > 0) {
-        prompt += `\n\nCRITICAL: The user currently has these items in their pantry: ${JSON.stringify(existingItemNames)}. 
-If you detect any of these items in the new image, you MUST use the exact same name from this list (case-sensitive) to keep tracking consistent. For example, if you see milk cartons and the list contains "Milk", use "Milk". Do not invent new names or variations like "milk carton" if it corresponds to an existing item in the list.`;
+        prompt += `\n\n5. EXISTING USER PANTRY ITEMS: The user currently has these items in their pantry: ${JSON.stringify(existingItemNames)}.
+If you detect any of these exact items, use the exact canonical name from this list to keep tracking continuous. However, if an item is a distinct variant (such as "Whole Milk" vs "Milk", or "Diet Coke" vs "Coke"), maintain its distinct name.`;
       }
 
       const imagePart = bufferToGenerativePart(req.file.buffer, req.file.mimetype);
@@ -316,10 +334,12 @@ If you detect any of these items in the new image, you MUST use the exact same n
       const parsed = extractJSON(responseText);
       if (parsed) {
         const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || parsed.inventory || []);
-        items = rawItems.map(item => ({
+        const mappedItems = rawItems.map(item => ({
           name: String(item.name || item.item || item.product || "Unknown Item").trim(),
           quantity: Math.max(1, parseInt(item.quantity, 10) || 1)
         }));
+        // Consolidate identical items, linguistic variations (singular/plural), while strictly preserving product variants
+        items = consolidateDetectedItems(mappedItems, existingItemNames);
       } else {
         console.warn("Could not parse structured JSON from Gemini vision response, defaulting to empty items:", responseText);
         items = [];
@@ -329,10 +349,12 @@ If you detect any of these items in the new image, you MUST use the exact same n
     // Save scan to scans collection
     const scanRef = db.collection("scans");
     const timestamp = new Date().toISOString();
+    const resolvedBaselineScanId = scanType === "subsequent" ? (baselineScanId || previousBaselineScan?.id || null) : null;
     const newScan = {
       userId,
       timestamp,
       scanType,
+      baselineScanId: resolvedBaselineScanId,
       items
     };
     const docRef = await scanRef.add(newScan);
@@ -369,6 +391,7 @@ If you detect any of these items in the new image, you MUST use the exact same n
     res.json({
       scanId: docRef.id,
       scanType,
+      baselineScanId: resolvedBaselineScanId,
       items,
       timestamp,
       predictions,
@@ -379,6 +402,176 @@ If you detect any of these items in the new image, you MUST use the exact same n
   } catch (error) {
     console.error("Error in /api/scan:", error);
     res.status(500).json({ error: error.message || "Failed to process image scan." });
+  }
+});
+
+/**
+ * PUT /api/scans/:id
+ * Updates items in an existing scan (CRUD edit support), and synchronizes inventory and predictions.
+ */
+app.put("/api/scans/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, items } = req.body;
+    if (!userId || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Missing userId or valid items array." });
+    }
+
+    const scanDocRef = db.collection("scans").doc(id);
+    const scanDoc = await scanDocRef.get();
+    if (!scanDoc.exists) {
+      return res.status(404).json({ error: "Scan not found." });
+    }
+
+    const scanData = scanDoc.data();
+    if (scanData.userId !== userId) {
+      return res.status(403).json({ error: "Unauthorized: Scan does not belong to user." });
+    }
+    const sanitizedItems = items
+      .map(item => ({
+        name: String(item.name || "").trim(),
+        quantity: Math.max(0, parseInt(item.quantity, 10) || 0)
+      }))
+      .filter(i => i.name.length > 0 && i.quantity > 0);
+    const consolidatedItems = consolidateDetectedItems(sanitizedItems);
+
+    const updatedAt = new Date().toISOString();
+    await scanDocRef.update({
+      items: consolidatedItems,
+      updatedAt
+    });
+
+    // Check if this scan matches latest inventory
+    const inventoryDocRef = db.collection("inventories").doc(userId);
+    const invDoc = await inventoryDocRef.get();
+    if (invDoc.exists && invDoc.data().lastScanId === id) {
+      await inventoryDocRef.update({
+        items: consolidatedItems,
+        updatedAt
+      });
+    }
+
+    // Recalculate consumption and update predictions if applicable
+    let predictions = [];
+    let shoppingList = [];
+    try {
+      const scansRef = db.collection("scans");
+      const querySnapshot = await scansRef.where("userId", "==", userId).get();
+      const userScans = [];
+      querySnapshot.forEach(doc => {
+        if (doc.id === id) {
+          userScans.push({ id: doc.id, ...scanData, items: consolidatedItems, updatedAt });
+        } else {
+          userScans.push({ id: doc.id, ...doc.data() });
+        }
+      });
+
+      if (userScans.length >= 2) {
+        userScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let baseScan = null;
+        let currScan = null;
+
+        if (scanData.scanType === "subsequent" && scanData.baselineScanId) {
+          baseScan = userScans.find(s => s.id === scanData.baselineScanId);
+          currScan = userScans.find(s => s.id === id);
+        } else if (scanData.scanType === "baseline") {
+          baseScan = userScans.find(s => s.id === id);
+          currScan = userScans.find(s => s.baselineScanId === id) || userScans.filter(s => s.scanType === "subsequent").pop();
+        }
+
+        if (!baseScan || !currScan) {
+          baseScan = userScans.find(s => s.scanType === "baseline");
+          currScan = userScans.filter(s => s.scanType === "subsequent").pop() || userScans[userScans.length - 1];
+        }
+
+        if (baseScan && currScan && baseScan.id !== currScan.id) {
+          const comp = calculateConsumption(baseScan, currScan);
+          predictions = comp.predictions;
+          shoppingList = comp.shoppingList;
+          await savePredictionsAndShoppingList(userId, predictions, shoppingList);
+        }
+      }
+    } catch (calcErr) {
+      console.warn("Could not recalculate predictions after scan update:", calcErr);
+    }
+
+    res.json({
+      success: true,
+      scanId: id,
+      items: consolidatedItems,
+      predictions,
+      shoppingList,
+      message: "Scan items updated successfully."
+    });
+  } catch (error) {
+    console.error("Error in PUT /api/scans/:id:", error);
+    res.status(500).json({ error: error.message || "Failed to update scan items." });
+  }
+});
+
+/**
+ * DELETE /api/scans/:id
+ * Deletes a scan (e.g. an uncompleted cycle) and synchronizes inventories.
+ */
+app.delete("/api/scans/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.query.userId || req.body?.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId." });
+    }
+
+    const scanDocRef = db.collection("scans").doc(id);
+    const scanDoc = await scanDocRef.get();
+    if (!scanDoc.exists) {
+      return res.status(404).json({ error: "Scan not found." });
+    }
+
+    const scanData = scanDoc.data();
+    if (scanData.userId !== userId) {
+      return res.status(403).json({ error: "Unauthorized: Scan does not belong to user." });
+    }
+
+    // Delete scan document
+    await scanDocRef.delete();
+
+    // Check if this scan was the latest snapshot in inventories
+    const inventoryDocRef = db.collection("inventories").doc(userId);
+    const invDoc = await inventoryDocRef.get();
+    if (invDoc.exists && invDoc.data().lastScanId === id) {
+      const remainingSnap = await db.collection("scans").where("userId", "==", userId).get();
+      const remainingScans = [];
+      remainingSnap.forEach(d => remainingScans.push({ id: d.id, ...d.data() }));
+      remainingScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      if (remainingScans.length > 0) {
+        const latest = remainingScans[0];
+        await inventoryDocRef.set({
+          userId,
+          items: latest.items || [],
+          lastScanId: latest.id,
+          updatedAt: new Date().toISOString(),
+          scanType: latest.scanType
+        });
+      } else {
+        await inventoryDocRef.set({
+          userId,
+          items: [],
+          lastScanId: null,
+          updatedAt: new Date().toISOString(),
+          scanType: null
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      scanId: id,
+      message: "Scan deleted successfully."
+    });
+  } catch (error) {
+    console.error("Error in DELETE /api/scans/:id:", error);
+    res.status(500).json({ error: error.message || "Failed to delete scan." });
   }
 });
 
