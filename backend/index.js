@@ -300,29 +300,27 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
           responseMimeType: "application/json",
           responseSchema: pantryScanSchema,
           temperature: 0.1,
-          maxOutputTokens: 2048
+          maxOutputTokens: 4096
         }
       });
-      let prompt = `You are an expert grocery inventory vision analyzer.
-Analyze this image of a pantry, refrigerator, freezer, or storage area.
-Identify ALL visible grocery and food items.
+      let prompt = `You are an expert inventory auditor. Perform an exhaustive visual scan of whatever storage space, container, surface, or environment is shown in this image, regardless of its type, location, or layout.
 
-CRITICAL INVENTORY RECOGNITION RULES:
-1. EXHAUSTIVE DETECTION:
-   - Identify every clearly visible grocery product, beverage, fruit, vegetable, condiment, and packaged food visible.
-   - Use clean, standard product names (e.g. "Eggs", "Milk", "Tomatoes", "Bread", "Apples").
-2. PRESERVE DISTINCT PRODUCT IDENTITIES (DO NOT MERGE DIFFERENT PRODUCTS):
-   - Keep different product varieties completely separate:
-     - "Diet Coke" is distinct from "Coca-Cola" / "Coke".
-     - "Whole Milk" is distinct from "Almond Milk", "Oat Milk", and "Skim Milk".
-     - "Greek Yogurt" is distinct from "Yogurt".
-     - "Brown Bread" is distinct from "White Bread".
-     - "Salted Butter" is distinct from "Unsalted Butter".
-3. QUANTITY ESTIMATION & LOCAL DEDUPLICATION:
-   - Estimate the total count or units visible (e.g., 4 apples = 4, 1 carton of 12 eggs = 12 eggs, 3 cans of soda = 3).
-   - If identical items appear in multiple spots in the photo, combine them into a single entry with their total count.
-4. RETURN FORMAT:
-   - Return valid JSON matching the schema with an "items" array.`;
+MANDATORY SCANNING INSTRUCTIONS:
+1. SPATIAL SWEEP: Systematically inspect all visible areas, surfaces, levels, rows, tiers, compartments, and containers across the entire frame from TOP to BOTTOM and LEFT to RIGHT.
+2. EXHAUSTIVE DETECTION: Do NOT summarize, stop early, or limit detection to prominent foreground items. Detect EVERY visible, identifiable food, beverage, grocery, or packaged product anywhere in the image.
+3. DISTINCT IDENTITIES: Differentiate separate product varieties, flavors, and brands (e.g., "ProV Cashew" vs "Nutraj Cashews", "Whole Milk" vs "Skim Milk", "California Inshell Walnuts" vs "Walnut Kernels").
+4. ACCURATE COUNTS: For each product, count all identical units visibly present. If items are stacked behind or arranged side-by-side, estimate the total visible count.
+5. CLEAN NAMING: Use concise, professional product titles (e.g., "California Inshell Walnuts", "ProV Jumbo Cashews", "Eggs", "Cheddar Cheese").
+
+Return JSON only matching the schema:
+{
+  "items": [
+    {
+      "name": "Exact Product Name",
+      "quantity": 1
+    }
+  ]
+}`;
 
       if (existingItemNames.length > 0) {
         prompt += `\n\n5. EXISTING USER PANTRY ITEMS: The user currently has these items in their pantry: ${JSON.stringify(existingItemNames)}.
