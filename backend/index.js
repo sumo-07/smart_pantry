@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import multer from "multer";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { db } from "./firebase-config.js";
+import { consolidateDetectedItems } from "./utils/itemNormalizer.js";
 // Firebase Admin SDK manages Firestore access
 
 dotenv.config();
@@ -284,13 +285,14 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     if (!genAI) {
       console.warn("GEMINI_API_KEY is not set or invalid. Using simulated image analysis.");
       // Simulated items for testing without API key
-      items = [
+      const simulatedItems = [
         { name: "Eggs", quantity: scanType === "baseline" ? 12 : 4 },
         { name: "Milk", quantity: scanType === "baseline" ? 4 : 1 },
         { name: "Bread", quantity: scanType === "baseline" ? 2 : 0 },
         { name: "Tomatoes", quantity: scanType === "baseline" ? 8 : 3 },
         { name: "Spinach", quantity: scanType === "baseline" ? 3 : 2 }
       ];
+      items = consolidateDetectedItems(simulatedItems, existingItemNames);
     } else {
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
@@ -321,8 +323,8 @@ Return JSON only matching the schema:
 }`;
 
       if (existingItemNames.length > 0) {
-        prompt += `\n\nCRITICAL: The user currently has these items in their pantry: ${JSON.stringify(existingItemNames)}. 
-If you detect any of these items in the new image, you MUST use the exact same name from this list (case-sensitive) to keep tracking consistent. For example, if you see milk cartons and the list contains "Milk", use "Milk". Do not invent new names or variations like "milk carton" if it corresponds to an existing item in the list.`;
+        prompt += `\n\n5. EXISTING USER PANTRY ITEMS: The user currently has these items in their pantry: ${JSON.stringify(existingItemNames)}.
+If you detect any of these exact items, use the exact canonical name from this list to keep tracking continuous. However, if an item is a distinct variant (such as "Whole Milk" vs "Milk", or "Diet Coke" vs "Coke"), maintain its distinct name.`;
       }
 
       const imagePart = bufferToGenerativePart(req.file.buffer, req.file.mimetype);
@@ -332,10 +334,12 @@ If you detect any of these items in the new image, you MUST use the exact same n
       const parsed = extractJSON(responseText);
       if (parsed) {
         const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || parsed.inventory || []);
-        items = rawItems.map(item => ({
+        const mappedItems = rawItems.map(item => ({
           name: String(item.name || item.item || item.product || "Unknown Item").trim(),
           quantity: Math.max(1, parseInt(item.quantity, 10) || 1)
         }));
+        // Consolidate identical items, linguistic variations (singular/plural), while strictly preserving product variants
+        items = consolidateDetectedItems(mappedItems, existingItemNames);
       } else {
         console.warn("Could not parse structured JSON from Gemini vision response, defaulting to empty items:", responseText);
         items = [];
@@ -429,10 +433,11 @@ app.put("/api/scans/:id", async (req, res) => {
         quantity: Math.max(0, parseInt(item.quantity, 10) || 0)
       }))
       .filter(i => i.name.length > 0 && i.quantity > 0);
+    const consolidatedItems = consolidateDetectedItems(sanitizedItems);
 
     const updatedAt = new Date().toISOString();
     await scanDocRef.update({
-      items: sanitizedItems,
+      items: consolidatedItems,
       updatedAt
     });
 
@@ -441,7 +446,7 @@ app.put("/api/scans/:id", async (req, res) => {
     const invDoc = await inventoryDocRef.get();
     if (invDoc.exists && invDoc.data().lastScanId === id) {
       await inventoryDocRef.update({
-        items: sanitizedItems,
+        items: consolidatedItems,
         updatedAt
       });
     }
@@ -455,7 +460,7 @@ app.put("/api/scans/:id", async (req, res) => {
       const userScans = [];
       querySnapshot.forEach(doc => {
         if (doc.id === id) {
-          userScans.push({ id: doc.id, ...scanData, items: sanitizedItems, updatedAt });
+          userScans.push({ id: doc.id, ...scanData, items: consolidatedItems, updatedAt });
         } else {
           userScans.push({ id: doc.id, ...doc.data() });
         }
@@ -493,7 +498,7 @@ app.put("/api/scans/:id", async (req, res) => {
     res.json({
       success: true,
       scanId: id,
-      items: sanitizedItems,
+      items: consolidatedItems,
       predictions,
       shoppingList,
       message: "Scan items updated successfully."
