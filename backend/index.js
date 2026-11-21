@@ -301,13 +301,13 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
           maxOutputTokens: 4096
         }
       });
-      let prompt = `You are an expert inventory auditor. Perform an exhaustive visual scan of this storage space (refrigerator, freezer, kitchen pantry, retail shelf rack, countertop, cupboard, or grocery basket).
+      let prompt = `You are an expert inventory auditor. Perform an exhaustive visual scan of whatever storage space, container, surface, or environment is shown in this image, regardless of its type, location, or layout.
 
 MANDATORY SCANNING INSTRUCTIONS:
-1. SPATIAL SWEEP: Systematically inspect every visible level, shelf, bin, rack, and compartment from TOP to BOTTOM. On each level, scan from LEFT to RIGHT.
-2. EXHAUSTIVE DETECTION: Do NOT summarize, stop early, or list only prominent foreground items. Detect EVERY visible, identifiable food, grocery, or packaged product across ALL shelves and tiers.
+1. SPATIAL SWEEP: Systematically inspect all visible areas, surfaces, levels, rows, tiers, compartments, and containers across the entire frame from TOP to BOTTOM and LEFT to RIGHT.
+2. EXHAUSTIVE DETECTION: Do NOT summarize, stop early, or limit detection to prominent foreground items. Detect EVERY visible, identifiable food, beverage, grocery, or packaged product anywhere in the image.
 3. DISTINCT IDENTITIES: Differentiate separate product varieties, flavors, and brands (e.g., "ProV Cashew" vs "Nutraj Cashews", "Whole Milk" vs "Skim Milk", "California Inshell Walnuts" vs "Walnut Kernels").
-4. ACCURATE COUNTS: For each product, count all identical units visibly present on that shelf. If stacked behind or side-by-side, estimate the visible count.
+4. ACCURATE COUNTS: For each product, count all identical units visibly present. If items are stacked behind or arranged side-by-side, estimate the total visible count.
 5. CLEAN NAMING: Use concise, professional product titles (e.g., "California Inshell Walnuts", "ProV Jumbo Cashews", "Eggs", "Cheddar Cheese").
 
 Return JSON only matching the schema:
