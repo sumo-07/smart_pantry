@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 export default function InventoryTable({
   items = [],
@@ -7,10 +8,30 @@ export default function InventoryTable({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [catMenuOpen, setCatMenuOpen] = useState(false);
   const [internalFilter, setInternalFilter] = useState("All");
+  const catMenuRef = useRef(null);
 
   const activeFilter = onStatusFilterChange ? statusFilter : internalFilter;
   const setFilter = onStatusFilterChange || setInternalFilter;
+
+  useEffect(() => {
+    if (!catMenuOpen) return;
+    const handleOutside = (e) => {
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target)) {
+        setCatMenuOpen(false);
+      }
+    };
+    const handleKey = (e) => {
+      if (e.key === "Escape") setCatMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [catMenuOpen]);
 
   const availableCategories = useMemo(() => {
     const cats = new Set();
@@ -59,19 +80,65 @@ export default function InventoryTable({
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "space-between", alignItems: "center" }}>
         <h2 className="sp-h2">Tracked inventory</h2>
+
         {availableCategories.length > 1 && (
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            aria-label="Filter by category"
-            className="key sm"
-          >
-            {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === "All" ? "All categories" : cat}
-              </option>
-            ))}
-          </select>
+          <div ref={catMenuRef} style={{ position: "relative" }}>
+            <button
+              type="button"
+              className={`key sm${categoryFilter !== "All" ? " on" : ""}`}
+              onClick={() => setCatMenuOpen((o) => !o)}
+              aria-expanded={catMenuOpen}
+              aria-haspopup="listbox"
+              aria-label="Filter by category"
+            >
+              <span>{categoryFilter === "All" ? "All categories" : categoryFilter}</span>
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: catMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform .15s"
+                }}
+              />
+            </button>
+
+            {catMenuOpen && (
+              <div
+                className="mod"
+                role="listbox"
+                aria-label="Categories"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "calc(100% + 8px)",
+                  zIndex: 20,
+                  padding: "10px",
+                  minWidth: "185px",
+                  maxHeight: "240px",
+                  overflowY: "auto",
+                  display: "grid",
+                  gap: "6px",
+                  borderRadius: "16px"
+                }}
+              >
+                {availableCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    role="option"
+                    aria-selected={categoryFilter === cat}
+                    className={`key sm${categoryFilter === cat ? " on" : ""}`}
+                    onClick={() => {
+                      setCategoryFilter(cat);
+                      setCatMenuOpen(false);
+                    }}
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                  >
+                    {cat === "All" ? "All categories" : cat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
