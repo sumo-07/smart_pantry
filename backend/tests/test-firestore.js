@@ -1,4 +1,4 @@
-import { db } from "./src/config/firebase.js";
+import { db } from "../src/config/firebase.js";
 
 db.settings({
   preferRest: true
@@ -15,15 +15,15 @@ const testDoc = {
 try {
   const docRef = await db.collection("scans").add(testDoc);
   console.log("Success! Document written with ID:", docRef.id);
-  
+
   console.log("Attempting to read it back...");
   const readDoc = await db.collection("scans").doc(docRef.id).get();
   console.log("Success! Read document data:", readDoc.data());
-  
+
   console.log("Cleaning up test document...");
   await db.collection("scans").doc(docRef.id).delete();
   console.log("Success! Cleaned up.");
-  
+
   process.exit(0);
 } catch (error) {
   console.error("Firestore test failed with error:", error);
