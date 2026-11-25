@@ -15,9 +15,10 @@ export const pantryScanSchema = {
         type: SchemaType.OBJECT,
         properties: {
           name: { type: SchemaType.STRING },
-          quantity: { type: SchemaType.INTEGER }
+          quantity: { type: SchemaType.INTEGER },
+          category: { type: SchemaType.STRING }
         },
-        required: ["name", "quantity"]
+        required: ["name", "quantity", "category"]
       }
     }
   },

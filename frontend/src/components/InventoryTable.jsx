@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { Search, Tag } from "lucide-react";
 
 export default function InventoryTable({
   items = [],
@@ -7,19 +7,32 @@ export default function InventoryTable({
   onStatusFilterChange
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [internalFilter, setInternalFilter] = useState("All");
 
   const activeFilter = onStatusFilterChange ? statusFilter : internalFilter;
   const setFilter = onStatusFilterChange || setInternalFilter;
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set();
+    items.forEach((item) => {
+      if (item.category && item.category.trim()) {
+        cats.add(item.category.trim());
+      }
+    });
+    return ["All", ...Array.from(cats).sort()];
+  }, [items]);
 
   const filteredPredictions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return items.filter((item) => {
       const matchesSearch = !q || item.name.toLowerCase().includes(q);
       const matchesStatus = activeFilter === "All" || item.status === activeFilter;
-      return matchesSearch && matchesStatus;
+      const itemCat = (item.category || "Other").trim();
+      const matchesCategory = categoryFilter === "All" || itemCat === categoryFilter;
+      return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [items, searchQuery, activeFilter]);
+  }, [items, searchQuery, activeFilter, categoryFilter]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -75,17 +88,37 @@ export default function InventoryTable({
           </p>
         </div>
 
-        {/* Clean Search + Status Filter Row */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="h-4 w-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search items..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/5 border border-gray-800 focus:border-indigo-500 focus:outline-none text-xs text-white placeholder-gray-500"
-            />
+        {/* Clean Search + Category Dropdown + Status Filter Row */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="h-4 w-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search items..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/5 border border-gray-800 focus:border-indigo-500 focus:outline-none text-xs text-white placeholder-gray-500"
+              />
+            </div>
+
+            {availableCategories.length > 1 && (
+              <div className="relative">
+                <Tag className="h-3.5 w-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  aria-label="Filter by category"
+                  className="pl-8 pr-7 py-2 rounded-xl bg-[#111827] border border-gray-800 focus:border-indigo-500 focus:outline-none text-xs text-gray-200 cursor-pointer"
+                >
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat === "All" ? "All Categories" : cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -123,7 +156,14 @@ export default function InventoryTable({
             {filteredPredictions.length > 0 ? (
               filteredPredictions.map((item) => (
                 <tr key={item.name} className="hover:bg-white/[0.02] transition duration-200">
-                  <td className="px-6 py-4 text-sm font-semibold text-white">{item.name}</td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-semibold text-white">{item.name}</div>
+                    {item.category && (
+                      <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/5 text-gray-400 border border-white/5">
+                        {item.category}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm text-center text-gray-200">{item.currentQuantity}</td>
                   <td className="px-6 py-4 text-sm text-center text-gray-400">
                     {item.consumed !== undefined ? item.consumed : "-"}
@@ -154,8 +194,15 @@ export default function InventoryTable({
           {filteredPredictions.length > 0 ? (
             filteredPredictions.map((item) => (
               <div key={item.name} className="p-4 space-y-3 hover:bg-white/[0.01] transition duration-150">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-white">{item.name}</span>
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <span className="text-sm font-bold text-white block">{item.name}</span>
+                    {item.category && (
+                      <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/5 text-gray-400 border border-white/5">
+                        {item.category}
+                      </span>
+                    )}
+                  </div>
                   {getStatusBadge(item.status)}
                 </div>
                 <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">

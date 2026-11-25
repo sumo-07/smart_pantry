@@ -118,7 +118,8 @@ export async function handleUpdateScan(req, res) {
     const sanitizedItems = items
       .map((item) => ({
         name: String(item.name || "").trim(),
-        quantity: Math.max(0, parseInt(item.quantity, 10) || 0)
+        quantity: Math.max(0, parseInt(item.quantity, 10) || 0),
+        ...(item.category ? { category: String(item.category).trim() } : {})
       }))
       .filter((i) => i.name.length > 0 && i.quantity > 0);
     const consolidatedItems = consolidateDetectedItems(sanitizedItems);

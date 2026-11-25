@@ -26,3 +26,11 @@ test("consolidateDetectedItems sums duplicate quantities and preserves canonical
   assert.deepEqual(result.find((i) => i.name === "Whole Milk"), { name: "Whole Milk", quantity: 1 });
   assert.deepEqual(result.find((i) => i.name === "Milk"), { name: "Milk", quantity: 2 });
 });
+
+test("consolidateDetectedItems preserves category when provided", () => {
+  const result = consolidateDetectedItems([
+    { name: "Tomato", quantity: 2, category: "Produce" },
+    { name: "Tomatoes", quantity: 3, category: "Produce" }
+  ]);
+  assert.deepEqual(result, [{ name: "Tomatoes", quantity: 5, category: "Produce" }]);
+});

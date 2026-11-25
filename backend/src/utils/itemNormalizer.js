@@ -104,10 +104,15 @@ export function consolidateDetectedItems(rawItems, existingItemNames = []) {
       }
     }
 
+    const itemCategory = raw.category ? String(raw.category).trim() : "";
+
     // Check if canonicalName matches an item already in our consolidated list
     const existingIndex = consolidated.findIndex(c => areItemsIdentical(c.name, canonicalName));
     if (existingIndex !== -1) {
       consolidated[existingIndex].quantity += itemQty;
+      if (itemCategory && !consolidated[existingIndex].category) {
+        consolidated[existingIndex].category = itemCategory;
+      }
     } else {
       const formattedName = canonicalName
         .split(" ")
@@ -116,7 +121,8 @@ export function consolidateDetectedItems(rawItems, existingItemNames = []) {
 
       consolidated.push({
         name: formattedName,
-        quantity: itemQty
+        quantity: itemQty,
+        ...(itemCategory ? { category: itemCategory } : {})
       });
     }
   }

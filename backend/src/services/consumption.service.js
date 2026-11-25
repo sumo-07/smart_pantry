@@ -56,8 +56,11 @@ export function calculateConsumption(baselineScan, currentScan) {
       status = "Healthy";
     }
 
+    const category = currItem?.category || baseItem?.category || "Other";
+
     predictions.push({
       name,
+      category,
       baselineQuantity: baseQty,
       currentQuantity: currQty,
       consumed,
@@ -70,6 +73,7 @@ export function calculateConsumption(baselineScan, currentScan) {
       const quantityNeeded = Math.max(1, baseQty - currQty);
       shoppingListItems.push({
         name,
+        category,
         quantityNeeded,
         checked: false
       });

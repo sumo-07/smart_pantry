@@ -20,13 +20,15 @@ MANDATORY SCANNING INSTRUCTIONS:
 3. DISTINCT IDENTITIES: Differentiate separate product varieties, flavors, and brands (e.g., "ProV Cashew" vs "Nutraj Cashews", "Whole Milk" vs "Skim Milk", "California Inshell Walnuts" vs "Walnut Kernels").
 4. ACCURATE COUNTS: For each product, count all identical units visibly present. If items are stacked behind or arranged side-by-side, estimate the total visible count.
 5. CLEAN NAMING: Use concise, professional product titles (e.g., "California Inshell Walnuts", "ProV Jumbo Cashews", "Eggs", "Cheddar Cheese").
+6. CATEGORY: Classify each item into one concise category: "Produce", "Dairy", "Snacks & Nuts", "Beverages", "Grains & Pantry", "Frozen", "Condiments", or "Other".
 
 Return JSON only matching the schema:
 {
   "items": [
     {
       "name": "Exact Product Name",
-      "quantity": 1
+      "quantity": 1,
+      "category": "Other"
     }
   ]
 }`;
@@ -47,11 +49,11 @@ export async function analyzePantryImage({ buffer, mimeType, existingItemNames =
   if (!genAI) {
     console.warn("GEMINI_API_KEY is not set or invalid. Using simulated image analysis.");
     const simulatedItems = [
-      { name: "Eggs", quantity: scanType === "baseline" ? 12 : 4 },
-      { name: "Milk", quantity: scanType === "baseline" ? 4 : 1 },
-      { name: "Bread", quantity: scanType === "baseline" ? 2 : 0 },
-      { name: "Tomatoes", quantity: scanType === "baseline" ? 8 : 3 },
-      { name: "Spinach", quantity: scanType === "baseline" ? 3 : 2 }
+      { name: "Eggs", quantity: scanType === "baseline" ? 12 : 4, category: "Dairy" },
+      { name: "Milk", quantity: scanType === "baseline" ? 4 : 1, category: "Dairy" },
+      { name: "Bread", quantity: scanType === "baseline" ? 2 : 0, category: "Grains & Pantry" },
+      { name: "Tomatoes", quantity: scanType === "baseline" ? 8 : 3, category: "Produce" },
+      { name: "Spinach", quantity: scanType === "baseline" ? 3 : 2, category: "Produce" }
     ];
     return consolidateDetectedItems(simulatedItems, existingItemNames);
   }
@@ -80,7 +82,8 @@ export async function analyzePantryImage({ buffer, mimeType, existingItemNames =
   const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || parsed.inventory || []);
   const mappedItems = rawItems.map((item) => ({
     name: String(item.name || item.item || item.product || "Unknown Item").trim(),
-    quantity: Math.max(1, parseInt(item.quantity, 10) || 1)
+    quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+    category: String(item.category || "Other").trim()
   }));
 
   return consolidateDetectedItems(mappedItems, existingItemNames);
