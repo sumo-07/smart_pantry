@@ -86,13 +86,13 @@ export default function Navbar({ familySize }) {
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <button
           type="button"
-          className="key sm"
+          className="key"
           onClick={toggleTheme}
           aria-label="Toggle light and dark mode"
           title={isCurrentlyDark ? "Switch to light mode" : "Switch to dark mode"}
-          style={{ padding: "7px 11px", gap: "6px" }}
+          style={{ padding: "10px 12px", height: "41px" }}
         >
-          {isCurrentlyDark ? <Sun size={15} /> : <Moon size={15} />}
+          {isCurrentlyDark ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
         {user ? (
