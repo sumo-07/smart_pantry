@@ -22,6 +22,7 @@ function ScanColumn({
   badgeText,
   badgeClass,
   scan,
+  baselineId,
   itemSearch,
   onDeleteScan,
   onAfterDelete
@@ -49,7 +50,7 @@ function ScanColumn({
           </p>
         </div>
         <Link
-          to="/scan"
+          to={`/scan?type=subsequent${baselineId ? `&baselineId=${encodeURIComponent(baselineId)}` : ""}`}
           className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-semibold text-indigo-300 transition"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -342,6 +343,7 @@ export default function ScanDetailModal({ cycle, onClose, onDeleteScan, onDelete
                 badgeText="Check-in"
                 badgeClass="bg-purple-500/15 text-purple-300 border-purple-500/25"
                 scan={activeFollowUp}
+                baselineId={cycle.baseline?.id}
                 itemSearch={itemSearch}
                 onDeleteScan={onDeleteScan}
                 onAfterDelete={onClose}

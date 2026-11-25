@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   Users, 
   Camera, 
@@ -99,8 +99,26 @@ export default function ScanUpload({
     return cycles.filter(c => c.isFulfilled).reverse();
   }, [cycles]);
 
-  // Default scanType: if there are pending uncompleted baselines, default to "subsequent", otherwise "baseline"
-  const [scanType, setScanType] = useState(() => (unfulfilledCycles.length > 0 ? "subsequent" : "baseline"));
+  const [searchParams] = useSearchParams();
+  const requestedType = searchParams.get("type");
+  const requestedBaselineId = searchParams.get("baselineId");
+
+  // Default to fresh "baseline" scan unless explicitly navigated with ?type=subsequent
+  const [scanType, setScanType] = useState(() =>
+    requestedType === "subsequent" && unfulfilledCycles.length > 0 ? "subsequent" : "baseline"
+  );
+
+  // Sync scanType & baseline selection when URL query params change
+  useEffect(() => {
+    if (requestedType === "subsequent" && unfulfilledCycles.length > 0) {
+      setScanType("subsequent");
+      if (requestedBaselineId && unfulfilledCycles.some((c) => c.id === requestedBaselineId)) {
+        setSelectedBaselineId(requestedBaselineId);
+      }
+    } else if (requestedType === "baseline" || !requestedType) {
+      setScanType("baseline");
+    }
+  }, [requestedType, requestedBaselineId, unfulfilledCycles]);
 
   // Keep selected baseline synchronized
   useEffect(() => {

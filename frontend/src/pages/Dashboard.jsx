@@ -356,7 +356,7 @@ export default function Dashboard({
                 <p className="text-xs text-gray-400 leading-relaxed">
                   Add a follow-up scan later to unlock consumption rates and depletion forecasts.
                 </p>
-                <Link to="/scan" className="inline-block text-xs font-bold text-indigo-400 hover:underline pt-1">
+                <Link to="/scan?type=subsequent" className="inline-block text-xs font-bold text-indigo-400 hover:underline pt-1">
                   Upload Scan Now →
                 </Link>
               </div>
