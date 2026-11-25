@@ -253,7 +253,6 @@ export default function Dashboard({
         <div className="layout-split:col-span-8">
           <InventoryTable
             items={predictions}
-            latestScanItems={scans[scans.length - 1]?.items || []}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
           />
