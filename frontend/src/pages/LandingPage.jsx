@@ -63,7 +63,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="lcd" aria-live="off" aria-label="Sample pantry readout">
+        <div className="lcd" aria-live="off" aria-label="Sample pantry readout" style={{ padding: "20px 22px" }}>
           <div
             className="lab"
             style={{ color: "inherit", opacity: 0.7, marginBottom: "8px", fontFamily: "var(--sans)" }}

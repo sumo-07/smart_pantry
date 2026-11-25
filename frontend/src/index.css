@@ -345,8 +345,8 @@ body::before {
 /* Home / Hero - fills initial desktop viewport; dials & steps appear on scroll */
 .hero {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 5vw;
+  grid-template-columns: 1fr 1.12fr;
+  gap: 4vw;
   align-items: center;
   align-content: center;
   min-height: calc(100vh - 96px);
