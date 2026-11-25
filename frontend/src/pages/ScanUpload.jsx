@@ -201,7 +201,7 @@ export default function ScanUpload({
       const data = await onUpdateScanItems(scanResult.scanId, editableItems);
       setScanResult((prev) => ({ ...prev, items: data?.items || editableItems }));
       setIsEditingItems(false);
-      setSaveMsg("SAVED TO CYCLE · OK");
+      setSaveMsg("CHANGES SAVED");
     } catch (err) {
       setErrorMsg(err.message || "Failed to save edits.");
     } finally {
@@ -477,7 +477,10 @@ export default function ScanUpload({
                     )}
                   </div>
                 ))}
-                <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "2px dashed rgba(27,36,21,.4)" }}>
+                <div
+                  className="log-row"
+                  style={{ marginTop: "8px", paddingTop: "6px", borderTop: "2px dashed rgba(27,36,21,.4)" }}
+                >
                   <span>{saveMsg || "SAVED TO CYCLE"}</span>
                   <span>OK</span>
                 </div>
