@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Sun, Moon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar({ familySize }) {
@@ -31,10 +32,11 @@ export default function Navbar({ familySize }) {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  const isCurrentlyDark = theme
+    ? theme === "dark"
+    : typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
   const toggleTheme = () => {
-    const isCurrentlyDark = theme
-      ? theme === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
     setTheme(isCurrentlyDark ? "light" : "dark");
   };
 
@@ -87,8 +89,10 @@ export default function Navbar({ familySize }) {
           className="key sm"
           onClick={toggleTheme}
           aria-label="Toggle light and dark mode"
+          title={isCurrentlyDark ? "Switch to light mode" : "Switch to dark mode"}
+          style={{ padding: "7px 11px", gap: "6px" }}
         >
-          Theme
+          {isCurrentlyDark ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
         {user ? (
