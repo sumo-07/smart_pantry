@@ -80,43 +80,30 @@ export default function ShoppingList({
 
   return (
     <section className="view">
-      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
-        <div className="top">
-          <div>
-            <h1 className="sp-h1">Shopping list</h1>
-            <p>Built from items that are low, critical or out of stock.</p>
-          </div>
-
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-            {shoppingList.length > 0 && (
-              <>
-                <button type="button" className="key sm" onClick={handleCopyList}>
-                  {copied ? "Copied!" : "Copy list"}
-                </button>
-                <button type="button" className="key sm pri" onClick={handleExportCsv}>
-                  Export CSV
-                </button>
-              </>
-            )}
-            <div
-              className="lcd"
-              style={{
-                padding: "10px 20px",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-                textAlign: "center",
-                lineHeight: 1
-              }}
-            >
-              <span style={{ fontSize: "34px", lineHeight: 1 }}>{remainingCount}</span>
-              <span style={{ fontSize: "15px", letterSpacing: "0.04em" }}>TO BUY</span>
-            </div>
-          </div>
+      <div className="top">
+        <div>
+          <h1 className="sp-h1">Shopping list</h1>
+          <p>Built from items that are low, critical or out of stock.</p>
         </div>
 
-        <div className="mod" style={{ width: "100%" }}>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          {shoppingList.length > 0 && (
+            <>
+              <button type="button" className="key sm" onClick={handleCopyList}>
+                {copied ? "Copied!" : "Copy list"}
+              </button>
+              <button type="button" className="key sm pri" onClick={handleExportCsv}>
+                Export CSV
+              </button>
+            </>
+          )}
+          <div className="lcd" style={{ padding: "8px 18px" }}>
+            <span style={{ fontSize: "34px" }}>{remainingCount}</span> TO BUY
+          </div>
+        </div>
+      </div>
+
+      <div className="mod" style={{ maxWidth: "720px" }}>
           <form
             onSubmit={handleAddSubmit}
             className="tools"
@@ -170,7 +157,6 @@ export default function ShoppingList({
               Your shopping list is empty. Everything is stocked up!
             </p>
           )}
-        </div>
       </div>
     </section>
   );

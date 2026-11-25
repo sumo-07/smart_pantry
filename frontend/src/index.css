@@ -1200,7 +1200,7 @@ body::before {
 }
 
 /* Responsive Breakpoints */
-@media (max-width: 1024px) {
+@media (max-width: 1160px) {
   .desktop-nav, .desktop-only, .user div { display: none; }
   .mobile-menu-btn { display: inline-flex; }
 }
