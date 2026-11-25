@@ -277,54 +277,119 @@ body::before {
   margin: 0;
 }
 
-/* Home / Hero */
+/* Mobile Hamburger & Drawer */
+.mobile-menu-btn {
+  display: none;
+}
+
+.mobile-drawer {
+  width: 100%;
+  order: 4;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mobile-nav-list {
+  display: grid;
+  gap: 8px;
+}
+
+/* Remove ugly native browser number spinners */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spin[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Tactile Scrollbars */
+.sp-scroll-y {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.scroll {
+  overflow: auto;
+  max-height: 390px;
+}
+
+.scroll::-webkit-scrollbar,
+.sp-scroll-y::-webkit-scrollbar,
+.log::-webkit-scrollbar,
+.cy-b .lcd::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll::-webkit-scrollbar-track,
+.sp-scroll-y::-webkit-scrollbar-track,
+.log::-webkit-scrollbar-track,
+.cy-b .lcd::-webkit-scrollbar-track {
+  background: var(--off);
+  border-radius: 6px;
+}
+
+.scroll::-webkit-scrollbar-thumb,
+.sp-scroll-y::-webkit-scrollbar-thumb,
+.log::-webkit-scrollbar-thumb,
+.cy-b .lcd::-webkit-scrollbar-thumb {
+  background: var(--mut);
+  border-radius: 6px;
+}
+
+/* Home / Hero - compact enough to see animation + dials in one viewport */
 .hero {
   display: grid;
   grid-template-columns: 1.05fr 1fr;
-  gap: 5vw;
+  gap: 4vw;
   align-items: center;
-  padding: 5vh 0 5vh;
+  padding: 1.5vh 0 2.5vh;
 }
 
 .hero .sp-h1 {
-  font-size: clamp(46px, 8.5vw, 120px);
+  font-size: clamp(34px, 5.4vw, 72px);
 }
 
 .lede {
   color: var(--mut);
   max-width: 44ch;
-  margin: 24px 0 32px;
-  font-size: 18px;
+  margin: 14px 0 20px;
+  font-size: 16px;
 }
 
 .scanrow {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
   flex-wrap: wrap;
 }
 
 .scan {
-  width: 112px;
-  height: 112px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   justify-content: center;
   background: radial-gradient(circle at 35% 30%, #4d6fff, var(--blue) 60%);
   color: #fff;
-  font: 800 22px var(--dot);
-  box-shadow: 0 7px 0 var(--blued), 0 14px 22px rgba(47, 85, 255, .4), 0 0 0 9px var(--panel), 0 0 0 11px var(--edge);
+  font: 800 20px var(--dot);
+  box-shadow: 0 7px 0 var(--blued), 0 14px 22px rgba(47, 85, 255, .4), 0 0 0 8px var(--panel), 0 0 0 10px var(--edge);
 }
 
 .scan:active {
-  box-shadow: 0 1px 0 var(--blued), 0 0 0 9px var(--panel), 0 0 0 11px var(--edge);
+  box-shadow: 0 1px 0 var(--blued), 0 0 0 8px var(--panel), 0 0 0 10px var(--edge);
 }
 
 .row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: clamp(18px, 2.4vw, 28px);
-  line-height: 1.35;
+  font-size: clamp(16px, 2vw, 23px);
+  line-height: 1.3;
 }
 
 .row s {
@@ -333,11 +398,11 @@ body::before {
 }
 
 .bigread {
-  font-size: clamp(16px, 2.4vw, 28px);
-  margin-top: 12px;
-  padding-top: 12px;
+  font-size: clamp(15px, 2vw, 23px);
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 2px dashed rgba(27, 36, 21, .4);
-  min-height: 2.7em;
+  min-height: 2.5em;
 }
 
 .blink {
@@ -350,21 +415,22 @@ body::before {
 
 .dials {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
 }
 
 .dialmod {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
+  padding: 16px 20px;
 }
 
 .dial {
   --p: 50;
   --c: var(--blue);
   position: relative;
-  width: 110px;
+  width: 84px;
   aspect-ratio: 1;
   border-radius: 50%;
   flex: none;
@@ -373,7 +439,7 @@ body::before {
 
 .dial i {
   position: absolute;
-  inset: 13px;
+  inset: 10px;
   border-radius: 50%;
   background: linear-gradient(#f6f4ee, #c9c6bc);
   box-shadow: 0 4px 8px rgba(0, 0, 0, .35);
@@ -383,10 +449,10 @@ body::before {
 .dial i::after {
   content: "";
   position: absolute;
-  top: 7px;
+  top: 6px;
   left: 50%;
   width: 4px;
-  height: 16px;
+  height: 13px;
   margin-left: -2px;
   border-radius: 2px;
   background: #1a1a1a;
@@ -395,16 +461,16 @@ body::before {
 .dialmod strong {
   font-family: var(--dot);
   font-weight: 800;
-  font-size: 44px;
+  font-size: 34px;
   line-height: 1;
   display: block;
 }
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .steps .mod {
@@ -557,7 +623,9 @@ body::before {
 
 /* Inventory Table */
 .scroll {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 380px;
+  padding-right: 4px;
 }
 
 .inv {
@@ -577,7 +645,11 @@ body::before {
 
 .ir.hd {
   border-top: 0;
-  padding: 0 0 6px;
+  padding: 4px 0 8px;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 2;
 }
 
 .ir b {
@@ -1128,11 +1200,15 @@ body::before {
 }
 
 /* Responsive Breakpoints */
+@media (max-width: 1024px) {
+  .desktop-nav, .desktop-only, .user div { display: none; }
+  .mobile-menu-btn { display: inline-flex; }
+}
+
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; }
   .s5, .s3, .s4, .s6, .s7, .s8 { grid-column: span 12; }
   .pads { grid-template-columns: repeat(7, 1fr); }
-  .user div { display: none; }
 }
 
 @media (max-width: 700px) {
@@ -1141,11 +1217,11 @@ body::before {
 
 @media (max-width: 600px) {
   .sp-header { padding: 12px 4vw; gap: 8px; }
-  .sp-nav { width: 100%; order: 3; gap: 8px; }
-  .sp-nav .key { padding: 8px 11px; font-size: 12px; border-radius: 10px; }
+  .brand { font-size: 16px; gap: 8px; }
+  .brand small { font-size: 12px; padding: 2px 7px; }
   .mod { padding: 16px; border-radius: 20px; }
   .lcd { border-width: 6px; padding: 12px 14px; }
-  .scan { width: 92px; height: 92px; font-size: 18px; }
+  .scan { width: 84px; height: 84px; font-size: 17px; }
   .pads { grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .bl-h { flex-wrap: wrap; padding: 14px; }
   .bl-h .meta { align-items: flex-start; text-align: left; }

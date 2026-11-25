@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { compressImage } from "../utils/compressImage";
 import { areItemsIdentical } from "../utils/itemNormalizer";
+import NumberStepper from "../components/NumberStepper";
 
 export default function ScanUpload({
   familySize = 4,
@@ -291,14 +292,12 @@ export default function ScanUpload({
           style={{ marginBottom: "16px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}
         >
           <span className="lab">HOUSEHOLD MEMBERS:</span>
-          <input
-            type="number"
-            min="1"
-            max="20"
+          <NumberStepper
             value={sizeInput}
-            onChange={(e) => setSizeInput(e.target.value)}
-            className="field"
-            style={{ maxWidth: "110px", flex: "none" }}
+            onChange={setSizeInput}
+            min={1}
+            max={20}
+            ariaLabel="Household members"
           />
           <button type="submit" className="key sm pri">
             Save size
@@ -448,6 +447,7 @@ export default function ScanUpload({
                             };
                             setEditableItems(next);
                           }}
+                          className="no-spin"
                           style={{
                             background: "transparent",
                             border: "none",
@@ -491,7 +491,7 @@ export default function ScanUpload({
 
           {isEditingItems && scanResult && (
             <div style={{ marginTop: "12px", display: "grid", gap: "10px" }}>
-              <form onSubmit={handleAddManualItem} style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <form onSubmit={handleAddManualItem} style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                 <input
                   type="text"
                   className="field"
@@ -499,13 +499,12 @@ export default function ScanUpload({
                   onChange={(e) => setNewItemName(e.target.value)}
                   placeholder="Add item name"
                 />
-                <input
-                  type="number"
-                  min="1"
-                  className="field"
+                <NumberStepper
                   value={newItemQty}
-                  onChange={(e) => setNewItemQty(e.target.value)}
-                  style={{ maxWidth: "80px", flex: "none" }}
+                  onChange={setNewItemQty}
+                  min={1}
+                  max={999}
+                  ariaLabel="New item quantity"
                 />
                 <button type="submit" className="key sm">
                   + Add
