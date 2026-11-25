@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import { db, useFirebase } from "./firebase";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { createThumbnailDataUrl } from "./utils/compressImage";
 
 // Lazy load secondary/heavy routes for dynamic code splitting
 const Insights = lazy(() => import("./pages/Insights"));
@@ -168,6 +169,16 @@ function AppContent() {
       formData.append("baselineScanId", baselineScanId);
     }
 
+    // Generate lightweight JPEG thumbnail for Firestore DB storage (never saved to localStorage)
+    try {
+      const thumbnail = await createThumbnailDataUrl(file);
+      if (thumbnail) {
+        formData.append("thumbnail", thumbnail);
+      }
+    } catch (thumbErr) {
+      console.warn("Thumbnail generation skipped:", thumbErr);
+    }
+
     // Call backend API
     const response = await fetch(`${API_URL}/scan`, {
       method: "POST",
@@ -187,7 +198,8 @@ function AppContent() {
       timestamp: result.timestamp || new Date().toISOString(),
       scanType: result.scanType || scanType,
       baselineScanId: baselineScanId || null,
-      items: result.items || []
+      items: result.items || [],
+      imageUrl: result.imageUrl || null
     };
 
     const finalScans = [...scans, newScan].sort(
@@ -203,9 +215,10 @@ function AppContent() {
       setShoppingList(result.shoppingList);
     }
 
-    // Persist to local storage if running in fallback mode
+    // Persist metadata to local storage ONLY in fallback mode (never store imageUrl in localStorage)
     if (!useFirebase) {
-      localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(finalScans));
+      const scansWithoutImages = finalScans.map(({ imageUrl, ...rest }) => rest);
+      localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(scansWithoutImages));
       if (result.predictions) {
         localStorage.setItem(`pantry_predictions_${userId}`, JSON.stringify(result.predictions));
       }
@@ -246,9 +259,10 @@ function AppContent() {
         setShoppingList(data.shoppingList);
       }
 
-      // 3. Fallback localStorage update
+      // 3. Fallback localStorage update (never store imageUrl in localStorage)
       if (!useFirebase) {
-        const localScans = scans.map(s => s.id === scanId ? { ...s, items: data.items || updatedItems } : s);
+        const localScans = scans.map(s => s.id === scanId ? { ...s, items: data.items || updatedItems } : s)
+          .map(({ imageUrl, ...rest }) => rest);
         localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(localScans));
       }
 
@@ -277,9 +291,10 @@ function AppContent() {
       const updatedScans = scans.filter(s => s.id !== scanId);
       setScans(updatedScans);
 
-      // 3. Fallback localStorage update
+      // 3. Fallback localStorage update (never store imageUrl in localStorage)
       if (!useFirebase) {
-        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(updatedScans));
+        const scansWithoutImages = updatedScans.map(({ imageUrl, ...rest }) => rest);
+        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(scansWithoutImages));
       }
     } catch (err) {
       console.error("Error deleting scan:", err);
@@ -500,11 +515,11 @@ function AppContent() {
                   familySize ? (
                     <Dashboard 
                       scans={scans} 
-                      predictions={predictions} 
+                      predictions={predictions}
+                      shoppingList={shoppingList}
                       familySize={familySize}
                       isLoading={dbLoading}
-                      onTriggerCompare={handleCompare}
-                      isComparing={isComparing}
+                      onDeleteScan={handleDeleteScan}
                     />
                   ) : (
                     <Navigate to="/scan" replace />
