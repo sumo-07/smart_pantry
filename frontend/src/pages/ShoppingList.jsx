@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { ClipboardCopy, Download, Check, ChevronDown } from "lucide-react";
 import NumberStepper from "../components/NumberStepper";
 
 function escapeCsvCell(value) {
@@ -18,6 +19,19 @@ export default function ShoppingList({
   const [newName, setNewName] = useState("");
   const [newQty, setNewQty] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handleOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [exportMenuOpen]);
 
   if (isLoading) {
     return (
@@ -51,6 +65,7 @@ export default function ShoppingList({
     try {
       await navigator.clipboard.writeText(`Smart Pantry Shopping List:\n${lines.join("\n")}`);
       setCopied(true);
+      setExportMenuOpen(false);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy shopping list:", err);
@@ -76,111 +91,170 @@ export default function ShoppingList({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    setExportMenuOpen(false);
   };
 
   return (
     <section className="view">
-      <div className="top">
-        <div>
-          <h1 className="sp-h1">Shopping list</h1>
-          <p>Built from items that are low, critical or out of stock.</p>
-        </div>
+      <div style={{ maxWidth: "920px" }}>
+        <div className="top">
+          <div>
+            <h1 className="sp-h1">Shopping list</h1>
+            <p>Built from items that are low, critical or out of stock.</p>
+          </div>
 
-        <div
-          className="lcd"
-          style={{
-            padding: "10px 20px",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-            lineHeight: 1
-          }}
-        >
-          <span style={{ fontSize: "34px", lineHeight: 1 }}>{remainingCount}</span>
-          <span style={{ fontSize: "16px", lineHeight: 1 }}>TO BUY</span>
-        </div>
-      </div>
-
-      <div className="mod" style={{ maxWidth: "720px" }}>
-        <form
-          onSubmit={handleAddSubmit}
-          className="tools"
-          style={{ marginTop: 0, marginBottom: "14px", alignItems: "center" }}
-        >
-          <input
-            type="text"
-            className="field"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Add item to shopping list"
-            aria-label="Add item to shopping list"
-          />
-          <NumberStepper
-            value={newQty}
-            onChange={setNewQty}
-            min={1}
-            max={99}
-            ariaLabel="Quantity needed"
-          />
-          <button type="submit" className="key sm pri">
-            + Add
-          </button>
-        </form>
-
-        {shoppingList.length > 0 && (
           <div
+            className="lcd"
             style={{
-              display: "flex",
-              justifyContent: "space-between",
+              padding: "10px 20px",
+              display: "inline-flex",
               alignItems: "center",
-              flexWrap: "wrap",
+              justifyContent: "center",
               gap: "10px",
-              paddingBottom: "12px",
-              marginBottom: "4px",
-              borderBottom: "2px solid var(--off)"
+              lineHeight: 1,
+              marginLeft: "auto"
             }}
           >
-            <span className="lab">{shoppingList.length} ITEMS IN LIST</span>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              <button type="button" className="key sm" onClick={handleCopyList}>
-                {copied ? "Copied!" : "Copy list"}
-              </button>
-              <button type="button" className="key sm pri" onClick={handleExportCsv}>
-                Export CSV
-              </button>
-            </div>
+            <span style={{ fontSize: "34px", lineHeight: 1 }}>{remainingCount}</span>
+            <span style={{ fontSize: "16px", lineHeight: 1 }}>TO BUY</span>
           </div>
-        )}
+        </div>
 
-        {shoppingList.length > 0 ? (
-          <div className="sp-scroll-y" style={{ paddingRight: "6px" }}>
-            {shoppingList.map((item, idx) => {
-              const isChecked = !!(item.checked || item.bought);
-              const detailText =
-                item.quantityNeeded !== undefined
-                  ? `${item.quantityNeeded} needed`
-                  : item.urgency || "Restock";
-              return (
+        <div className="mod" style={{ width: "100%" }}>
+          <form
+            onSubmit={handleAddSubmit}
+            className="tools"
+            style={{ marginTop: 0, marginBottom: "14px", alignItems: "center" }}
+          >
+            <input
+              type="text"
+              className="field"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Add item to shopping list"
+              aria-label="Add item to shopping list"
+            />
+            <NumberStepper
+              value={newQty}
+              onChange={setNewQty}
+              min={1}
+              max={99}
+              ariaLabel="Quantity needed"
+            />
+            <button type="submit" className="key sm pri">
+              + Add
+            </button>
+          </form>
+
+          {shoppingList.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px",
+                paddingBottom: "12px",
+                marginBottom: "4px",
+                borderBottom: "2px solid var(--off)"
+              }}
+            >
+              <span className="lab">{shoppingList.length} ITEMS IN LIST</span>
+
+              {/* Copy / Export Choice Dropdown */}
+              <div ref={menuRef} style={{ position: "relative" }}>
                 <button
-                  key={`${item.name}-${idx}`}
                   type="button"
-                  className="li"
-                  aria-pressed={isChecked}
-                  onClick={() => onToggleItem && onToggleItem(idx)}
+                  className="key sm"
+                  onClick={() => setExportMenuOpen((o) => !o)}
+                  aria-expanded={exportMenuOpen}
+                  aria-haspopup="menu"
                 >
-                  <i />
-                  <span>{item.name}</span>
-                  <small>{detailText}</small>
+                  {copied ? (
+                    <>
+                      <Check size={14} style={{ color: "var(--gt)" }} />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCopy size={14} />
+                      <span>Share / Export</span>
+                      <ChevronDown size={14} />
+                    </>
+                  )}
                 </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="lab" style={{ padding: "18px 0" }}>
-            Your shopping list is empty. Everything is stocked up!
-          </p>
-        )}
+
+                {exportMenuOpen && (
+                  <div
+                    className="mod"
+                    role="menu"
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "calc(100% + 8px)",
+                      zIndex: 20,
+                      padding: "10px",
+                      minWidth: "190px",
+                      display: "grid",
+                      gap: "8px",
+                      borderRadius: "16px"
+                    }}
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="key sm"
+                      onClick={handleCopyList}
+                      style={{ width: "100%", justifyContent: "flex-start" }}
+                    >
+                      <ClipboardCopy size={14} />
+                      Copy to clipboard
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="key sm pri"
+                      onClick={handleExportCsv}
+                      style={{ width: "100%", justifyContent: "flex-start" }}
+                    >
+                      <Download size={14} />
+                      Export CSV
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {shoppingList.length > 0 ? (
+            <div className="sp-scroll-y" style={{ paddingRight: "6px" }}>
+              {shoppingList.map((item, idx) => {
+                const isChecked = !!(item.checked || item.bought);
+                const detailText =
+                  item.quantityNeeded !== undefined
+                    ? `${item.quantityNeeded} needed`
+                    : item.urgency || "Restock";
+                return (
+                  <button
+                    key={`${item.name}-${idx}`}
+                    type="button"
+                    className="li"
+                    aria-pressed={isChecked}
+                    onClick={() => onToggleItem && onToggleItem(idx)}
+                  >
+                    <i />
+                    <span>{item.name}</span>
+                    <small>{detailText}</small>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="lab" style={{ padding: "18px 0" }}>
+              Your shopping list is empty. Everything is stocked up!
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
