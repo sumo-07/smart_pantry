@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       } else {
-        // Create default mock user for quick hackathon review
+        // Create default mock user for quick demo review
         const defaultMock = {
           uid: "demo_guest_user",
           email: "demo@smartpantry.ai",

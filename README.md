@@ -1,52 +1,69 @@
-# Smart Pantry AI - Hackathon Project
+# Smart Pantry AI
+
 🚀 **Live Demo:** [Smart Pantry AI](https://smart-pantry1.netlify.app/)
 
-Smart Pantry AI is a modern SaaS-style web application designed to track pantry and fridge inventory using computer vision. By comparing snapshots taken immediately after restocking with subsequent snapshots, the app calculates item consumption rates, projects run-out dates, and compiles an auto-updating smart shopping checklist.
+Smart Pantry AI is a modern SaaS web application for tracking pantry, refrigerator, and storage inventory using computer vision. By comparing baseline restock snapshots with follow-up scans, the app calculates item consumption rates, projects run-out dates, and compiles an auto-updating smart shopping list.
+
+---
+
+## Key Features
+
+- **Universal AI Vision Scanning**: Powered by Google Gemini 2.5 Flash with a top-to-bottom, left-to-right spatial sweep prompt, structured JSON schema enforcement, and resilient JSON recovery—working across refrigerators, pantries, shelves, and countertops.
+- **Smart Item Deduplication & Product Categories**: Automatically consolidates singular/plural duplicates (e.g., `Egg` + `Eggs` → `Eggs`) while preserving distinct product variants (`Diet Coke` ≠ `Coca-Cola`, `Whole Milk` ≠ `Milk`), and classifies items into categories (`Produce`, `Dairy`, `Snacks & Nuts`, `Beverages`, `Grains & Pantry`, `Frozen`, `Condiments`, `Other`).
+- **Paired Restock Cycles & Scan History Viewer**: Groups each Baseline Restock with its Follow-up scans into unified cycles, storing lightweight JPEG preview thumbnails in Firestore and displaying side-by-side cycle comparisons with zoomable photos and whole-pair deletion.
+- **Consumption & Depletion Analytics**:
+  - `daily_rate = consumed / days_between_scans`
+  - `days_left = current_quantity / daily_rate`
+  - Classifies stock as **Healthy**, **Low** (≤ 3 days), or **Critical** (≤ 1 day or out of stock).
+- **Smart Shopping List & Export**: Automatically queues Low/Critical items, supports custom items, and provides **Copy List** (clipboard) and **Export CSV** actions.
+- **Demo & Fallback Support**: Automatically falls back to `localStorage` if Firebase credentials aren't configured, and simulated vision analysis if `GEMINI_API_KEY` is omitted.
+
+---
 
 ## Tech Stack
 
-- **Frontend**: React.js, JavaScript, Vite, Tailwind CSS, Framer Motion, React Router, Lucide Icons.
-- **Backend**: Node.js, Express.js, Multer (for image upload handling), Google Gemini Vision SDK.
-- **Database**: Firebase Firestore.
+- **Frontend**: React, Vite, Tailwind CSS, Framer Motion, React Router, Lucide Icons
+- **Backend**: Node.js, Express, Multer, Google Generative AI SDK (`@google/generative-ai`), Firebase Admin SDK
+- **Database & Auth**: Firebase Firestore & Firebase Authentication
+
+---
 
 ## Project Structure
 
 ```text
 backend/
+├── package.json
 ├── src/
 │   ├── app.js                   # Express app wiring & middleware
 │   ├── server.js                # HTTP server startup (`npm start` / `npm run dev`)
 │   ├── config/                  # Env, Firebase Admin, & Gemini Vision config
 │   ├── controllers/             # HTTP request/response handlers
-│   ├── middlewares/             # Multer upload middleware
+│   ├── middlewares/             # Multer in-memory upload middleware
 │   ├── routes/                  # Express /api route definitions
 │   ├── services/                # Gemini Vision, consumption engine, Firestore persistence
 │   └── utils/                   # JSON recovery parser & item normalizer
-└── tests/                       # Isolated unit tests (`npm test`)
+└── tests/                       # Isolated unit tests (`npm test`) & manual diagnostic scripts
 
 frontend/
 └── src/
-    ├── components/              # Reusable UI components & modals
+    ├── components/              # Reusable UI components & modals (InventoryTable, ScanDetailModal, etc.)
     ├── context/                 # AuthContext
-    ├── pages/                   # Route pages (Dashboard, ScanUpload, ShoppingList, Insights)
-    └── utils/                   # Image compression/thumbnails & item normalizer
+    ├── pages/                   # Route views (Dashboard, ScanUpload, ShoppingList, Insights)
+    └── utils/                   # 1920px image compression, thumbnail generator & item normalizer
 ```
 
 ---
 
 ## Getting Started
 
-### 1. Environment Configurations
-
-Create and populate the environment variables in both `frontend` and `backend` directories.
+### 1. Environment Configuration
 
 #### Backend (`backend/.env`)
-Create a file at `backend/.env` with:
 ```env
 PORT=5000
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Firebase configuration (shares the same keys as frontend)
+# Firebase configuration
 VITE_FIREBASE_API_KEY=your_firebase_api_key_here
 VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain_here
 VITE_FIREBASE_PROJECT_ID=your_firebase_project_id_here
@@ -56,7 +73,6 @@ VITE_FIREBASE_APP_ID=your_firebase_app_id_here
 ```
 
 #### Frontend (`frontend/.env`)
-Create a file at `frontend/.env` with:
 ```env
 VITE_FIREBASE_API_KEY=your_firebase_api_key_here
 VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain_here
@@ -68,36 +84,42 @@ VITE_FIREBASE_APP_ID=your_firebase_app_id_here
 VITE_API_URL=http://localhost:5000/api
 ```
 
----
-
-### 2. How to Run Locally
-
-You can run both frontend and backend in parallel.
+### 2. Run Locally
 
 #### Start Backend
-Open a terminal, navigate to the `backend` directory, and run:
 ```bash
 cd backend
+npm install
 npm run dev
 ```
-The backend server will launch at `http://localhost:5000`.
+Runs at `http://localhost:5000`.
 
 #### Start Frontend
-Open a separate terminal, navigate to the `frontend` directory, and run:
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
-The Vite development server will launch at `http://localhost:5173`.
+Runs at `http://localhost:5173`.
+
+### 3. Run Tests & Builds
+```bash
+# Backend unit tests
+cd backend && npm test
+
+# Frontend production build
+cd frontend && npm run build
+```
 
 ---
 
-## Key Features & Demo Flow
+## API Endpoints
 
-1. **Self-Contained Local Storage Demo Mode**: If you haven't set up the Firebase Firestore credentials yet, the frontend automatically falls back to standard Local Storage. This allows you to explore the app immediately without database connection errors.
-2. **Robust Vision Mock Mode**: If `GEMINI_API_KEY` is not supplied, the backend falls back to simulating a successful computer vision analysis. This allows you to test image uploads and watch how baseline vs subsequent scans interact.
-3. **Consumption & Depletion Analytics**: The comparison calculation uses the mathematical formula:
-   - `daily_rate = consumed / days_between_scans`
-   - `days_left = current_quantity / daily_rate`
-   - It marks items as **Healthy**, **Low** (depleting in <= 3 days), or **Critical** (depleting in <= 1 day or out-of-stock).
-4. **Smart Checklist**: Low and critical items are automatically pushed to the smart shopping list. You can add custom items or check off items as they are restocked.
+- `GET /api/health` — Health check & Gemini availability status
+- `POST /api/scan` — Upload pantry image + optional thumbnail, run Gemini Vision, save scan & update predictions
+- `PUT /api/scans/:id` — Update items in an existing scan and recalculate predictions
+- `DELETE /api/scans/:id` — Delete a scan and resynchronize inventory & predictions
+- `POST /api/scans/delete-batch` — Atomically delete a whole scan cycle/pair and resynchronize state
+- `POST /api/compare` — Compare a baseline scan against a follow-up scan
+- `GET /api/predictions` — Fetch latest depletion predictions for a user
+- `GET /api/shopping-list` — Fetch latest shopping list for a user
