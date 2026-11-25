@@ -1,4 +1,4 @@
-import { db } from "./firebase-config.js";
+import { db } from "./src/config/firebase.js";
 
 db.settings({
   preferRest: true

@@ -13,10 +13,9 @@ Smart Pantry AI is a modern SaaS-style web application designed to track pantry 
 
 ```text
 backend/
-├── index.js                     # Thin entrypoint launching src/server.js
 ├── src/
 │   ├── app.js                   # Express app wiring & middleware
-│   ├── server.js                # HTTP server startup
+│   ├── server.js                # HTTP server startup (`npm start` / `npm run dev`)
 │   ├── config/                  # Env, Firebase Admin, & Gemini Vision config
 │   ├── controllers/             # HTTP request/response handlers
 │   ├── middlewares/             # Multer upload middleware
