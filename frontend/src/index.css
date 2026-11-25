@@ -346,7 +346,7 @@ body::before {
 .hero {
   display: grid;
   grid-template-columns: 1.05fr 1fr;
-  gap: 4vw;
+  gap: 5vw;
   align-items: center;
   align-content: center;
   min-height: calc(100vh - 96px);
@@ -354,44 +354,44 @@ body::before {
 }
 
 .hero .sp-h1 {
-  font-size: clamp(34px, 5.4vw, 72px);
+  font-size: clamp(52px, 8.5vw, 120px);
 }
 
 .lede {
   color: var(--mut);
   max-width: 44ch;
-  margin: 14px 0 20px;
-  font-size: 16px;
+  margin: 24px 0 32px;
+  font-size: 18px;
 }
 
 .scanrow {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
 .scan {
-  width: 96px;
-  height: 96px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   justify-content: center;
   background: radial-gradient(circle at 35% 30%, #4d6fff, var(--blue) 60%);
   color: #fff;
-  font: 800 20px var(--dot);
-  box-shadow: 0 7px 0 var(--blued), 0 14px 22px rgba(47, 85, 255, .4), 0 0 0 8px var(--panel), 0 0 0 10px var(--edge);
+  font: 800 22px var(--dot);
+  box-shadow: 0 7px 0 var(--blued), 0 14px 22px rgba(47, 85, 255, .4), 0 0 0 9px var(--panel), 0 0 0 11px var(--edge);
 }
 
 .scan:active {
-  box-shadow: 0 1px 0 var(--blued), 0 0 0 8px var(--panel), 0 0 0 10px var(--edge);
+  box-shadow: 0 1px 0 var(--blued), 0 0 0 9px var(--panel), 0 0 0 11px var(--edge);
 }
 
 .row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: clamp(16px, 2vw, 23px);
-  line-height: 1.3;
+  font-size: clamp(20px, 2.4vw, 28px);
+  line-height: 1.35;
 }
 
 .row s {
@@ -400,11 +400,11 @@ body::before {
 }
 
 .bigread {
-  font-size: clamp(15px, 2vw, 23px);
-  margin-top: 10px;
-  padding-top: 10px;
+  font-size: clamp(18px, 2.4vw, 28px);
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 2px dashed rgba(27, 36, 21, .4);
-  min-height: 2.5em;
+  min-height: 2.7em;
 }
 
 .blink {
