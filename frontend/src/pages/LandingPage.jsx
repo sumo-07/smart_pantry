@@ -42,7 +42,13 @@ export default function LandingPage() {
           <p className="lab" style={{ marginBottom: "18px" }}>
             Next-gen grocery tracker
           </p>
-          <h1 className="sp-h1">Know before you run out.</h1>
+          <h1 className="sp-h1">
+            Know
+            <br />
+            <span style={{ whiteSpace: "nowrap" }}>before you</span>
+            <br />
+            run out.
+          </h1>
           <p className="lede">
             Snap your pantry, compare it with the last scan, and see exactly what will be gone and when.
           </p>
