@@ -346,6 +346,13 @@ If you detect any of these exact items, use the exact canonical name from this l
       }
     }
 
+    // Validate optional lightweight thumbnail data URL for Firestore storage (must stay well under 1 MB doc limit)
+    const rawThumbnail = typeof req.body?.thumbnail === "string" ? req.body.thumbnail.trim() : "";
+    const validatedThumbnail =
+      rawThumbnail.startsWith("data:image/") && rawThumbnail.length <= 450000
+        ? rawThumbnail
+        : null;
+
     // Save scan to scans collection
     const scanRef = db.collection("scans");
     const timestamp = new Date().toISOString();
@@ -355,7 +362,8 @@ If you detect any of these exact items, use the exact canonical name from this l
       timestamp,
       scanType,
       baselineScanId: resolvedBaselineScanId,
-      items
+      items,
+      ...(validatedThumbnail ? { imageUrl: validatedThumbnail } : {})
     };
     const docRef = await scanRef.add(newScan);
     const createdScan = { id: docRef.id, ...newScan };
@@ -393,6 +401,7 @@ If you detect any of these exact items, use the exact canonical name from this l
       scanType,
       baselineScanId: resolvedBaselineScanId,
       items,
+      imageUrl: validatedThumbnail,
       timestamp,
       predictions,
       shoppingList,
