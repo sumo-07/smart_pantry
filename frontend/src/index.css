@@ -764,11 +764,19 @@ body::before {
 /* Scanner Viewfinder */
 .vf {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
+  max-height: 320px;
+  width: 100%;
   overflow: hidden;
   display: grid;
   place-items: center;
   padding: 0;
+}
+
+.s7 .scan {
+  width: 88px;
+  height: 88px;
+  font-size: 18px;
 }
 
 .vf img {
