@@ -9,30 +9,26 @@
      - Present distinct, actionable options with trade-offs.
      - **Wait for the user's explicit choice** before writing or modifying code.
 2. **Scope**:
-   - This protocol is global, mandatory, and applies across all projects, repositories, and conversations.
+   - Applies across this repository and all conversations in this workspace.
 
-## Git, Staging & Production Deployment Protocol
+## Git, Staging & Production Deployment Protocol (Milestone PR Flow)
 
-1. **Branching Strategy (Always Branch off `staging`)**:
-   - The primary integration branch is `staging`.
-   - For every feature, bugfix, or issue resolution, create an isolated branch (e.g., `fix/...` or `feature/...`) branched off `staging`.
-   - Use Git worktrees for parallel agents and keep worktrees alive for local manual testing.
+1. **Develop & Test on `staging`**:
+   - **`staging`** is the primary working and integration branch.
+   - Build, iterate, and test features locally on `staging` (run builds, syntax checks, and tests before committing).
+   - Only create an isolated `feature/*` branch or worktree when running parallel agents or isolating a large, risky experiment—do **not** open a separate PR for every small fix or iteration.
 
-2. **Automated Reviewer / Verifier Agent**:
-   - Once authoring code changes are complete and a Pull Request is submitted, an independent **Reviewer / Verifier Agent** must automatically run.
-   - The Reviewer Agent:
-     - Pulls and inspects the complete `git diff`.
-     - Executes project builds, test suites, or syntax validations (`npm test`, `npm run build`, `pytest`, etc.).
-     - Validates code quality, edge cases, and performance impact.
-     - Posts a structured Code Review Report to the PR and presents it to the user.
+2. **1 PR = 1 Complete, Tested Milestone (`staging` → `main`)**:
+   - Only open a Pull Request (from **`staging` → `main`**) once a complete feature or milestone has been **tested locally** and is ready for production.
+   - If follow-up fixes are needed for that milestone, push them to `staging` (updating the same PR) rather than opening new PRs.
 
-3. **Two-Stage Approval & Merging Protocol**:
-   - **Stage 1 (Merge to `staging`)**:
-     - Present the PR, diff summary, and Reviewer Agent report to the user.
-     - Ask for user approval to merge into **`staging`**.
-     - Once approved, merge the feature branch into `staging`.
-   - **Stage 2 (Final Merge to `main` / Production)**:
-     - Integration and local manual testing happen on `staging`.
-     - **NEVER merge `staging` into `main` without explicit user confirmation.**
-     - Only when the user explicitly instructs to merge to `main`, execute the merge from `staging` into `main` with a structured commit message (e.g., `feat(scope): ...` or `fix(scope): ...`).
-     - Clean up temporary branches and worktrees only after the final merge to `main` is approved and completed.
+3. **Automated Reviewer / Verifier Agent (Before Merging to `main`)**:
+   - When a milestone PR (`staging` → `main`) is opened, run an independent **Reviewer / Verifier Agent** to:
+     - Inspect the full `git diff main...staging`.
+     - Run project builds, syntax checks, and test suites.
+     - Post a structured Code Review Report to the PR and present it to the user.
+
+4. **Production Merge & Post-Release Sync**:
+   - **NEVER merge `staging` into `main` without explicit user confirmation.**
+   - Merge `staging` → `main` using a standard merge commit (preserves release history and allows 1-command rollback).
+   - After merging to `main`, fast-forward `staging` (`git merge main --ff-only`, falling back to regular merge if `main` diverged) so both branches stay 100% in sync, and clean up any temporary branches/worktrees if used.
