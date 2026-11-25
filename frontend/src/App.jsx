@@ -273,11 +273,35 @@ function AppContent() {
     }
   };
 
-  // Handle deleting a scan via backend
+  // Helper to apply predictions/shoppingList and localStorage fallback after scan deletion
+  const applyPostDeleteState = (deletedIdsSet, data) => {
+    setScans(prev => {
+      const nextScans = prev.filter(s => !deletedIdsSet.has(s.id));
+      if (!useFirebase) {
+        const scansWithoutImages = nextScans.map(({ imageUrl: _img, ...rest }) => rest);
+        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(scansWithoutImages));
+      }
+      return nextScans;
+    });
+
+    if (Array.isArray(data?.predictions)) {
+      setPredictions(data.predictions);
+      if (!useFirebase) {
+        localStorage.setItem(`pantry_predictions_${userId}`, JSON.stringify(data.predictions));
+      }
+    }
+    if (Array.isArray(data?.shoppingList)) {
+      setShoppingList(data.shoppingList);
+      if (!useFirebase) {
+        localStorage.setItem(`pantry_shoppingList_${userId}`, JSON.stringify(data.shoppingList));
+      }
+    }
+  };
+
+  // Handle deleting a single scan via backend
   const handleDeleteScan = async (scanId) => {
     if (!userId) return;
     try {
-      // 1. Call backend endpoint as sole authoritative source
       const res = await fetch(`${API_URL}/scans/${scanId}?userId=${encodeURIComponent(userId)}`, {
         method: "DELETE"
       });
@@ -287,17 +311,34 @@ function AppContent() {
         throw new Error(errData.error || "Failed to delete scan on server.");
       }
 
-      // 2. On server success, update frontend state
-      const updatedScans = scans.filter(s => s.id !== scanId);
-      setScans(updatedScans);
-
-      // 3. Fallback localStorage update (never store imageUrl in localStorage)
-      if (!useFirebase) {
-        const scansWithoutImages = updatedScans.map(({ imageUrl, ...rest }) => rest);
-        localStorage.setItem(`pantry_scans_${userId}`, JSON.stringify(scansWithoutImages));
-      }
+      const data = await res.json();
+      applyPostDeleteState(new Set([scanId]), data);
     } catch (err) {
       console.error("Error deleting scan:", err);
+      throw err;
+    }
+  };
+
+  // Handle deleting an entire scan pair/cycle atomically via backend
+  const handleDeleteScanPair = async (scanIds) => {
+    if (!userId || !Array.isArray(scanIds) || scanIds.length === 0) return;
+    try {
+      const res = await fetch(`${API_URL}/scans/delete-batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, scanIds })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to delete scan pair on server.");
+      }
+
+      const data = await res.json();
+      const deletedSet = new Set(data.deletedIds || scanIds);
+      applyPostDeleteState(deletedSet, data);
+    } catch (err) {
+      console.error("Error deleting scan pair:", err);
       throw err;
     }
   };
@@ -520,6 +561,7 @@ function AppContent() {
                       familySize={familySize}
                       isLoading={dbLoading}
                       onDeleteScan={handleDeleteScan}
+                      onDeleteScanPair={handleDeleteScanPair}
                     />
                   ) : (
                     <Navigate to="/scan" replace />

@@ -519,8 +519,72 @@ app.put("/api/scans/:id", async (req, res) => {
 });
 
 /**
+ * Synchronizes user's inventories snapshot, predictions, and shopping list
+ * based on remaining scans after one or more scans are deleted.
+ */
+async function syncStateAfterScanDeletion(userId, deletedIdsSet) {
+  const remainingSnap = await db.collection("scans").where("userId", "==", userId).get();
+  const remainingScans = [];
+  remainingSnap.forEach(d => remainingScans.push({ id: d.id, ...d.data() }));
+  // Sort oldest -> newest
+  remainingScans.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  // Update inventories snapshot if the previous lastScanId was deleted
+  const inventoryDocRef = db.collection("inventories").doc(userId);
+  const invDoc = await inventoryDocRef.get();
+  if (!invDoc.exists || deletedIdsSet.has(invDoc.data().lastScanId)) {
+    if (remainingScans.length > 0) {
+      const latest = remainingScans[remainingScans.length - 1];
+      await inventoryDocRef.set({
+        userId,
+        items: latest.items || [],
+        lastScanId: latest.id,
+        updatedAt: new Date().toISOString(),
+        scanType: latest.scanType
+      });
+    } else {
+      await inventoryDocRef.set({
+        userId,
+        items: [],
+        lastScanId: null,
+        updatedAt: new Date().toISOString(),
+        scanType: null
+      });
+    }
+  }
+
+  // Recalculate or clear predictions & shopping list
+  if (remainingScans.length === 0) {
+    await savePredictionsAndShoppingList(userId, [], []);
+    return { predictions: [], shoppingList: [] };
+  }
+
+  const newest = remainingScans[remainingScans.length - 1];
+  let baselineScan = newest;
+
+  if (newest.scanType !== "baseline") {
+    let latestBase = null;
+    for (let i = remainingScans.length - 1; i >= 0; i--) {
+      if (remainingScans[i].scanType === "baseline") {
+        latestBase = remainingScans[i];
+        break;
+      }
+    }
+    if (latestBase) {
+      baselineScan = latestBase;
+    } else if (remainingScans.length >= 2) {
+      baselineScan = remainingScans[remainingScans.length - 2];
+    }
+  }
+
+  const { predictions, shoppingList } = calculateConsumption(baselineScan, newest);
+  await savePredictionsAndShoppingList(userId, predictions, shoppingList);
+  return { predictions, shoppingList };
+}
+
+/**
  * DELETE /api/scans/:id
- * Deletes a scan (e.g. an uncompleted cycle) and synchronizes inventories.
+ * Deletes a scan and synchronizes inventories, predictions, and shopping list.
  */
 app.delete("/api/scans/:id", async (req, res) => {
   try {
@@ -541,46 +605,70 @@ app.delete("/api/scans/:id", async (req, res) => {
       return res.status(403).json({ error: "Unauthorized: Scan does not belong to user." });
     }
 
-    // Delete scan document
     await scanDocRef.delete();
 
-    // Check if this scan was the latest snapshot in inventories
-    const inventoryDocRef = db.collection("inventories").doc(userId);
-    const invDoc = await inventoryDocRef.get();
-    if (invDoc.exists && invDoc.data().lastScanId === id) {
-      const remainingSnap = await db.collection("scans").where("userId", "==", userId).get();
-      const remainingScans = [];
-      remainingSnap.forEach(d => remainingScans.push({ id: d.id, ...d.data() }));
-      remainingScans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-      if (remainingScans.length > 0) {
-        const latest = remainingScans[0];
-        await inventoryDocRef.set({
-          userId,
-          items: latest.items || [],
-          lastScanId: latest.id,
-          updatedAt: new Date().toISOString(),
-          scanType: latest.scanType
-        });
-      } else {
-        await inventoryDocRef.set({
-          userId,
-          items: [],
-          lastScanId: null,
-          updatedAt: new Date().toISOString(),
-          scanType: null
-        });
-      }
-    }
+    const { predictions, shoppingList } = await syncStateAfterScanDeletion(userId, new Set([id]));
 
     res.json({
       success: true,
       scanId: id,
+      predictions,
+      shoppingList,
       message: "Scan deleted successfully."
     });
   } catch (error) {
     console.error("Error in DELETE /api/scans/:id:", error);
     res.status(500).json({ error: error.message || "Failed to delete scan." });
+  }
+});
+
+/**
+ * POST /api/scans/delete-batch
+ * Atomically deletes a whole scan cycle/pair (baseline + follow-ups) and recalculates predictions once.
+ */
+app.post("/api/scans/delete-batch", async (req, res) => {
+  try {
+    const { userId, scanIds } = req.body;
+    if (!userId || !Array.isArray(scanIds) || scanIds.length === 0) {
+      return res.status(400).json({ error: "Missing userId or valid scanIds array." });
+    }
+
+    const uniqueIds = [...new Set(scanIds.map(id => String(id).trim()).filter(Boolean))];
+    if (uniqueIds.length === 0) {
+      return res.status(400).json({ error: "No valid scanIds provided." });
+    }
+
+    const docRefs = uniqueIds.map(id => db.collection("scans").doc(id));
+    const docs = await Promise.all(docRefs.map(ref => ref.get()));
+
+    const batch = db.batch();
+    const deletedIds = [];
+
+    for (const scanDoc of docs) {
+      if (!scanDoc.exists) continue;
+      if (scanDoc.data().userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized: One or more scans do not belong to user." });
+      }
+      batch.delete(scanDoc.ref);
+      deletedIds.push(scanDoc.id);
+    }
+
+    if (deletedIds.length > 0) {
+      await batch.commit();
+    }
+
+    const { predictions, shoppingList } = await syncStateAfterScanDeletion(userId, new Set(deletedIds));
+
+    res.json({
+      success: true,
+      deletedIds,
+      predictions,
+      shoppingList,
+      message: "Scan pair deleted successfully."
+    });
+  } catch (error) {
+    console.error("Error in POST /api/scans/delete-batch:", error);
+    res.status(500).json({ error: error.message || "Failed to delete scan pair." });
   }
 });
 

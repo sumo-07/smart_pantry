@@ -69,7 +69,8 @@ export default function Dashboard({
   shoppingList = [],
   familySize,
   isLoading,
-  onDeleteScan
+  onDeleteScan,
+  onDeleteScanPair
 }) {
   const [selectedCycleId, setSelectedCycleId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
@@ -414,6 +415,7 @@ export default function Dashboard({
         cycle={selectedCycle}
         onClose={() => setSelectedCycleId(null)}
         onDeleteScan={onDeleteScan}
+        onDeleteScanPair={onDeleteScanPair}
       />
     </div>
   );

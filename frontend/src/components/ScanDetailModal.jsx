@@ -210,15 +210,19 @@ function ScanColumn({
 /**
  * Modal displaying a Baseline + Follow-up scan pair in two separate side-by-side divs.
  */
-export default function ScanDetailModal({ cycle, onClose, onDeleteScan }) {
+export default function ScanDetailModal({ cycle, onClose, onDeleteScan, onDeleteScanPair }) {
   const [itemSearch, setItemSearch] = useState("");
   const [activeFollowUpIdx, setActiveFollowUpIdx] = useState(0);
+  const [confirmDeletePair, setConfirmDeletePair] = useState(false);
+  const [isDeletingPair, setIsDeletingPair] = useState(false);
 
   const followUps = cycle?.followUps || [];
 
   useEffect(() => {
     setItemSearch("");
     setActiveFollowUpIdx(followUps.length > 0 ? followUps.length - 1 : 0);
+    setConfirmDeletePair(false);
+    setIsDeletingPair(false);
   }, [cycle?.id, followUps.length]);
 
   useEffect(() => {
@@ -233,6 +237,23 @@ export default function ScanDetailModal({ cycle, onClose, onDeleteScan }) {
   if (!cycle) return null;
 
   const activeFollowUp = followUps[activeFollowUpIdx] || null;
+  const allCycleScanIds = [
+    ...(cycle.baseline?.id ? [cycle.baseline.id] : []),
+    ...followUps.map((f) => f.id).filter(Boolean)
+  ];
+
+  const handleConfirmDeletePair = async () => {
+    if (!onDeleteScanPair || allCycleScanIds.length === 0 || isDeletingPair) return;
+    setIsDeletingPair(true);
+    try {
+      await onDeleteScanPair(allCycleScanIds);
+      onClose();
+    } catch (err) {
+      console.error("Failed to delete scan pair:", err);
+      setIsDeletingPair(false);
+      setConfirmDeletePair(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -326,6 +347,51 @@ export default function ScanDetailModal({ cycle, onClose, onDeleteScan }) {
                 onAfterDelete={onClose}
               />
             </div>
+          </div>
+
+          {/* Modal Footer: Whole-Pair Delete & Close */}
+          <div className="px-6 py-4 border-t border-brand-border flex flex-wrap items-center justify-between gap-3 bg-white/[0.01]">
+            {onDeleteScanPair && allCycleScanIds.length > 0 ? (
+              !confirmDeletePair ? (
+                <button
+                  onClick={() => setConfirmDeletePair(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-semibold text-rose-400 hover:text-rose-300 transition cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {allCycleScanIds.length > 1
+                    ? `Delete Entire Pair (${allCycleScanIds.length} scans)`
+                    : "Delete Cycle"}
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-xs text-rose-300 font-medium">
+                    Delete all {allCycleScanIds.length} scan{allCycleScanIds.length > 1 ? "s" : ""} in this pair permanently?
+                  </span>
+                  <button
+                    onClick={handleConfirmDeletePair}
+                    disabled={isDeletingPair}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/25 hover:bg-rose-500/35 border border-rose-500/35 text-xs font-semibold text-rose-200 transition cursor-pointer disabled:opacity-50"
+                  >
+                    {isDeletingPair ? "Deleting..." : "Confirm Delete All"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeletePair(false)}
+                    className="text-xs text-gray-400 hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )
+            ) : (
+              <div />
+            )}
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 hover:text-white transition cursor-pointer ml-auto"
+            >
+              Close
+            </button>
           </div>
         </motion.div>
       </motion.div>
