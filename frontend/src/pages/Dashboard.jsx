@@ -19,37 +19,48 @@ import EmptyState from "../components/EmptyState";
 import ScanDetailModal from "../components/ScanDetailModal";
 
 /**
- * Computes a human-readable label for a scan relative to its preceding baseline scan.
+ * Groups chronological scans into Restock Cycles (each Baseline + its Follow-up scans counted as 1 pair).
  */
-function getScanLabel(scan, idx, scans) {
-  if (idx === 0) return "Initial Scan";
-  if (scan.scanType === "baseline") return "Pantry Restocked";
+function groupScansIntoCycles(scans) {
+  const cycles = [];
+  const baselineMap = new Map();
 
-  let baselineScan = null;
-  for (let i = idx - 1; i >= 0; i--) {
-    if (scans[i].scanType === "baseline") {
-      baselineScan = scans[i];
-      break;
+  for (const scan of scans) {
+    if (scan.scanType === "baseline") {
+      const cycle = {
+        id: scan.id || scan.timestamp,
+        baseline: scan,
+        followUps: []
+      };
+      cycles.push(cycle);
+      if (scan.id) baselineMap.set(scan.id, cycle);
+    } else {
+      const targetCycle =
+        (scan.baselineScanId && baselineMap.get(scan.baselineScanId)) ||
+        cycles[cycles.length - 1];
+
+      if (targetCycle) {
+        targetCycle.followUps.push(scan);
+      } else {
+        cycles.push({
+          id: scan.id || scan.timestamp,
+          baseline: null,
+          followUps: [scan]
+        });
+      }
     }
   }
 
-  if (!baselineScan) return "Subsequent Scan";
-
-  const tCurr = new Date(scan.timestamp);
-  tCurr.setSeconds(0, 0);
-  const tBase = new Date(baselineScan.timestamp);
-  tBase.setSeconds(0, 0);
-
-  const diffMs = Math.max(0, tCurr - tBase);
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = (diffMs / (1000 * 60 * 60 * 24)).toFixed(1);
-
-  if (diffSec < 60) return "Just after restock";
-  if (diffMin < 60) return `${diffMin} min${diffMin > 1 ? "s" : ""} later`;
-  if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? "s" : ""} later`;
-  return `${diffDay} day${Number(diffDay) > 1 ? "s" : ""} later`;
+  return cycles.map((cycle, index) => {
+    const primaryScan = cycle.baseline || cycle.followUps[0];
+    const dateLabel = new Date(primaryScan.timestamp).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric"
+    });
+    const isLatest = index === cycles.length - 1;
+    const title = isLatest ? `Current Cycle · ${dateLabel}` : `Cycle #${index + 1} · ${dateLabel}`;
+    return { ...cycle, title };
+  });
 }
 
 export default function Dashboard({
@@ -60,9 +71,9 @@ export default function Dashboard({
   isLoading,
   onDeleteScan
 }) {
-  const [selectedScanEntry, setSelectedScanEntry] = useState(null);
+  const [selectedCycleId, setSelectedCycleId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
-  const [showAllScans, setShowAllScans] = useState(false);
+  const [showAllCycles, setShowAllCycles] = useState(false);
 
   const healthCounts = useMemo(() => {
     const healthy = predictions.filter((p) => p.status === "Healthy").length;
@@ -72,31 +83,25 @@ export default function Dashboard({
     return { healthy, low, critical, total };
   }, [predictions]);
 
+  const orderedCycles = useMemo(() => {
+    return groupScansIntoCycles(scans).reverse();
+  }, [scans]);
+
+  const selectedCycle = useMemo(
+    () => orderedCycles.find((c) => c.id === selectedCycleId) || null,
+    [orderedCycles, selectedCycleId]
+  );
+
   const activeCycleInfo = useMemo(() => {
-    if (scans.length === 0) return null;
-    let latestBaseline = scans[0];
-    for (let i = scans.length - 1; i >= 0; i--) {
-      if (scans[i].scanType === "baseline") {
-        latestBaseline = scans[i];
-        break;
-      }
-    }
-    const startLabel = new Date(latestBaseline.timestamp).toLocaleDateString(undefined, {
+    if (orderedCycles.length === 0) return null;
+    const latest = orderedCycles[0];
+    const anchor = latest.baseline || latest.followUps[0];
+    const startLabel = new Date(anchor.timestamp).toLocaleDateString(undefined, {
       month: "short",
       day: "numeric"
     });
-    return { startLabel, totalScans: scans.length };
-  }, [scans]);
-
-  // Display newest scans first in Previous Scans card so recent activity is immediately visible
-  const orderedScans = useMemo(() => {
-    return scans
-      .map((scan, idx) => ({
-        scan,
-        label: getScanLabel(scan, idx, scans)
-      }))
-      .reverse();
-  }, [scans]);
+    return { startLabel, totalCycles: orderedCycles.length };
+  }, [orderedCycles]);
 
   if (isLoading) {
     return (
@@ -123,7 +128,7 @@ export default function Dashboard({
   const itemsRunningLowCount = healthCounts.low + healthCounts.critical;
   const predictedRestocksCount = healthCounts.critical;
   const pendingShoppingItems = shoppingList.filter((item) => !item.bought);
-  const visibleScans = showAllScans ? orderedScans : orderedScans.slice(0, 4);
+  const visibleCycles = showAllCycles ? orderedCycles : orderedCycles.slice(0, 4);
 
   return (
     <div className="space-y-7 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -135,7 +140,7 @@ export default function Dashboard({
           </h2>
           <p className="text-sm text-gray-400">
             {activeCycleInfo
-              ? `Active cycle started ${activeCycleInfo.startLabel} · ${activeCycleInfo.totalScans} scan${activeCycleInfo.totalScans > 1 ? "s" : ""} recorded`
+              ? `Active cycle started ${activeCycleInfo.startLabel} · ${activeCycleInfo.totalCycles} scan cycle${activeCycleInfo.totalCycles > 1 ? "s" : ""} recorded`
               : "Scan-driven consumption analysis and stock tracking."}
           </p>
         </div>
@@ -253,7 +258,7 @@ export default function Dashboard({
           />
         </div>
 
-        {/* Right Sidebar: Previous Scans (with Images) & Quick Shopping Preview */}
+        {/* Right Sidebar: Previous Scans (Grouped Pairs) & Quick Shopping Preview */}
         <div className="layout-split:col-span-4 space-y-6">
           {/* Previous Scans Card */}
           <div className="glass-panel rounded-3xl p-6 space-y-4">
@@ -263,60 +268,81 @@ export default function Dashboard({
                 Previous Scans
               </h3>
               <span className="text-xs font-medium text-gray-500">
-                {orderedScans.length} total
+                {orderedCycles.length} {orderedCycles.length === 1 ? "cycle" : "cycles"}
               </span>
             </div>
 
             <div className="space-y-3">
-              {visibleScans.map(({ scan, label }) => {
-                const scanDate = new Date(scan.timestamp).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                });
+              {visibleCycles.map((cycle) => {
+                const latestFollowUp = cycle.followUps[cycle.followUps.length - 1] || null;
+                const previewImg = latestFollowUp?.imageUrl || cycle.baseline?.imageUrl || null;
+                const hasPair = Boolean(cycle.baseline && cycle.followUps.length > 0);
+                const pairBadge = hasPair
+                  ? cycle.followUps.length > 1
+                    ? `Baseline + ${cycle.followUps.length} Follow-ups`
+                    : "Baseline + Follow-up"
+                  : cycle.baseline
+                  ? "Baseline Only"
+                  : "Follow-up";
+
+                const baseCount = cycle.baseline?.items?.length || 0;
+                const followCount = latestFollowUp?.items?.length || 0;
+                const summaryText = hasPair
+                  ? `${baseCount} → ${followCount} items`
+                  : `${baseCount || followCount} items`;
+
                 return (
                   <button
-                    key={scan.id || scan.timestamp}
-                    onClick={() => setSelectedScanEntry({ scan, label })}
+                    key={cycle.id}
+                    onClick={() => setSelectedCycleId(cycle.id)}
                     className="w-full text-left p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-indigo-500/30 transition flex items-center gap-3.5 group cursor-pointer"
                   >
                     {/* Thumbnail Preview */}
-                    {scan.imageUrl ? (
-                      <img
-                        src={scan.imageUrl}
-                        alt={label}
-                        className="h-14 w-14 rounded-xl object-cover border border-white/10 shrink-0"
-                      />
+                    {previewImg ? (
+                      <div className="relative h-14 w-14 shrink-0">
+                        <img
+                          src={previewImg}
+                          alt={cycle.title}
+                          className="h-14 w-14 rounded-xl object-cover border border-white/10"
+                        />
+                        {hasPair && cycle.baseline?.imageUrl && latestFollowUp?.imageUrl && (
+                          <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-indigo-600 text-[9px] font-bold text-white shadow">
+                            2x
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <div className="h-14 w-14 rounded-xl bg-gray-800/80 border border-white/5 flex items-center justify-center text-gray-500 shrink-0">
                         <Camera className="h-5 w-5" />
                       </div>
                     )}
 
-                    {/* Scan Metadata */}
+                    {/* Cycle Metadata */}
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-bold text-white truncate group-hover:text-indigo-300 transition">
-                          {label}
+                          {cycle.title}
                         </span>
                         <Eye className="h-3.5 w-3.5 text-gray-500 group-hover:text-indigo-400 shrink-0 transition" />
                       </div>
-                      <p className="text-xs text-gray-400 truncate">
-                        {scan.items?.length || 0} items · {scanDate}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
+                          {pairBadge}
+                        </span>
+                        <span className="text-xs text-gray-400">{summaryText}</span>
+                      </div>
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {orderedScans.length > 4 && (
+            {orderedCycles.length > 4 && (
               <button
-                onClick={() => setShowAllScans((prev) => !prev)}
+                onClick={() => setShowAllCycles((prev) => !prev)}
                 className="w-full py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition cursor-pointer"
               >
-                {showAllScans ? "Show Fewer Scans" : `View All ${orderedScans.length} Scans`}
+                {showAllCycles ? "Show Fewer Cycles" : `View All ${orderedCycles.length} Cycles`}
               </button>
             )}
           </div>
@@ -383,11 +409,10 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Scan Detail Modal */}
+      {/* Side-by-Side Cycle Scan Detail Modal */}
       <ScanDetailModal
-        scan={selectedScanEntry?.scan || null}
-        scanLabel={selectedScanEntry?.label || ""}
-        onClose={() => setSelectedScanEntry(null)}
+        cycle={selectedCycle}
+        onClose={() => setSelectedCycleId(null)}
         onDeleteScan={onDeleteScan}
       />
     </div>
