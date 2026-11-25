@@ -118,10 +118,11 @@ export default function Navbar({ familySize }) {
             {/* Hamburger toggle on small/medium screens */}
             <button
               type="button"
-              className={`key sm mobile-menu-btn${menuOpen ? " on" : ""}`}
+              className={`key mobile-menu-btn${menuOpen ? " pri" : ""}`}
               onClick={() => setMenuOpen((o) => !o)}
               aria-expanded={menuOpen}
               aria-label="Toggle navigation menu"
+              style={{ padding: "10px 13px", height: "41px" }}
             >
               {menuOpen ? "✕" : "☰"}
             </button>
