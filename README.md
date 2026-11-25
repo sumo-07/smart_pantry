@@ -9,6 +9,30 @@ Smart Pantry AI is a modern SaaS-style web application designed to track pantry 
 - **Backend**: Node.js, Express.js, Multer (for image upload handling), Google Gemini Vision SDK.
 - **Database**: Firebase Firestore.
 
+## Project Structure
+
+```text
+backend/
+├── index.js                     # Thin entrypoint launching src/server.js
+├── src/
+│   ├── app.js                   # Express app wiring & middleware
+│   ├── server.js                # HTTP server startup
+│   ├── config/                  # Env, Firebase Admin, & Gemini Vision config
+│   ├── controllers/             # HTTP request/response handlers
+│   ├── middlewares/             # Multer upload middleware
+│   ├── routes/                  # Express /api route definitions
+│   ├── services/                # Gemini Vision, consumption engine, Firestore persistence
+│   └── utils/                   # JSON recovery parser & item normalizer
+└── tests/                       # Isolated unit tests (`npm test`)
+
+frontend/
+└── src/
+    ├── components/              # Reusable UI components & modals
+    ├── context/                 # AuthContext
+    ├── pages/                   # Route pages (Dashboard, ScanUpload, ShoppingList, Insights)
+    └── utils/                   # Image compression/thumbnails & item normalizer
+```
+
 ---
 
 ## Getting Started
