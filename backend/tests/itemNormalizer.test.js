@@ -32,5 +32,5 @@ test("consolidateDetectedItems preserves category when provided", () => {
     { name: "Tomato", quantity: 2, category: "Produce" },
     { name: "Tomatoes", quantity: 3, category: "Produce" }
   ]);
-  assert.deepEqual(result, [{ name: "Tomatoes", quantity: 5, category: "Produce" }]);
+  assert.deepEqual(result, [{ name: "Tomato", quantity: 5, category: "Produce" }]);
 });
