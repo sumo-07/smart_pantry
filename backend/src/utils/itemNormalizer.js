@@ -1,6 +1,6 @@
 /**
  * Smart Inventory Item Normalizer & Deduplicator
- * 
+ *
  * Rules:
  * 1. Merges exact duplicate items and linguistic variations (singular/plural, e.g. "Egg" & "Eggs" -> "Eggs").
  * 2. Strictly PRESERVES distinct product identity modifiers (e.g. "Diet Coke" != "Coca-Cola", "Whole Milk" != "Milk").
@@ -24,8 +24,8 @@ const PRODUCT_QUALIFIERS = new Set([
  * taking into account singular/plural variations and case differences,
  * while STRICTLY ensuring different product variants remain completely separate.
  *
- * @param {string} nameA 
- * @param {string} nameB 
+ * @param {string} nameA
+ * @param {string} nameB
  * @returns {boolean}
  */
 export function areItemsIdentical(nameA, nameB) {
@@ -49,12 +49,10 @@ export function areItemsIdentical(nameA, nameB) {
   const qualifiersA = wordsA.filter(w => PRODUCT_QUALIFIERS.has(w)).sort().join(" ");
   const qualifiersB = wordsB.filter(w => PRODUCT_QUALIFIERS.has(w)).sort().join(" ");
   if (qualifiersA !== qualifiersB) {
-    // Different qualifiers (e.g. "diet" vs none, or "whole" vs "almond") -> NEVER GROUP!
     return false;
   }
 
   // 3. Check singular/plural inflection
-  // e.g. "Egg" vs "Eggs", "Tomato" vs "Tomatoes", "Red Apple" vs "Red Apples"
   if (wordsA.length === wordsB.length) {
     let allPrefixesMatch = true;
     for (let i = 0; i < wordsA.length - 1; i++) {
@@ -83,8 +81,8 @@ export function areItemsIdentical(nameA, nameB) {
  * 1. Matches against existing pantry inventory names if they share identical product identity (preserving canonical name).
  * 2. Merges duplicate items in the scan list and sums their quantities.
  *
- * @param {Array<{name: string, quantity: number}>} rawItems 
- * @param {Array<string>} [existingItemNames=[]] 
+ * @param {Array<{name: string, quantity: number}>} rawItems
+ * @param {Array<string>} [existingItemNames=[]]
  * @returns {Array<{name: string, quantity: number}>}
  */
 export function consolidateDetectedItems(rawItems, existingItemNames = []) {
@@ -106,12 +104,16 @@ export function consolidateDetectedItems(rawItems, existingItemNames = []) {
       }
     }
 
+    const itemCategory = raw.category ? String(raw.category).trim() : "";
+
     // Check if canonicalName matches an item already in our consolidated list
     const existingIndex = consolidated.findIndex(c => areItemsIdentical(c.name, canonicalName));
     if (existingIndex !== -1) {
       consolidated[existingIndex].quantity += itemQty;
+      if (itemCategory && !consolidated[existingIndex].category) {
+        consolidated[existingIndex].category = itemCategory;
+      }
     } else {
-      // Capitalize first letter of each word for clean display
       const formattedName = canonicalName
         .split(" ")
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -119,7 +121,8 @@ export function consolidateDetectedItems(rawItems, existingItemNames = []) {
 
       consolidated.push({
         name: formattedName,
-        quantity: itemQty
+        quantity: itemQty,
+        ...(itemCategory ? { category: itemCategory } : {})
       });
     }
   }
