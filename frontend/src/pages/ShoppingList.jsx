@@ -86,77 +86,101 @@ export default function ShoppingList({
           <p>Built from items that are low, critical or out of stock.</p>
         </div>
 
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-          {shoppingList.length > 0 && (
-            <>
+        <div
+          className="lcd"
+          style={{
+            padding: "10px 20px",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            lineHeight: 1
+          }}
+        >
+          <span style={{ fontSize: "34px", lineHeight: 1 }}>{remainingCount}</span>
+          <span style={{ fontSize: "16px", lineHeight: 1 }}>TO BUY</span>
+        </div>
+      </div>
+
+      <div className="mod" style={{ maxWidth: "720px" }}>
+        <form
+          onSubmit={handleAddSubmit}
+          className="tools"
+          style={{ marginTop: 0, marginBottom: "14px", alignItems: "center" }}
+        >
+          <input
+            type="text"
+            className="field"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Add item to shopping list"
+            aria-label="Add item to shopping list"
+          />
+          <NumberStepper
+            value={newQty}
+            onChange={setNewQty}
+            min={1}
+            max={99}
+            ariaLabel="Quantity needed"
+          />
+          <button type="submit" className="key sm pri">
+            + Add
+          </button>
+        </form>
+
+        {shoppingList.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+              paddingBottom: "12px",
+              marginBottom: "4px",
+              borderBottom: "2px solid var(--off)"
+            }}
+          >
+            <span className="lab">{shoppingList.length} ITEMS IN LIST</span>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button type="button" className="key sm" onClick={handleCopyList}>
                 {copied ? "Copied!" : "Copy list"}
               </button>
               <button type="button" className="key sm pri" onClick={handleExportCsv}>
                 Export CSV
               </button>
-            </>
-          )}
-          <div className="lcd" style={{ padding: "8px 18px" }}>
-            <span style={{ fontSize: "34px" }}>{remainingCount}</span> TO BUY
-          </div>
-        </div>
-      </div>
-
-      <div className="mod" style={{ maxWidth: "720px" }}>
-          <form
-            onSubmit={handleAddSubmit}
-            className="tools"
-            style={{ marginTop: 0, marginBottom: "14px", alignItems: "center" }}
-          >
-            <input
-              type="text"
-              className="field"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Add item to shopping list"
-              aria-label="Add item to shopping list"
-            />
-            <NumberStepper
-              value={newQty}
-              onChange={setNewQty}
-              min={1}
-              max={99}
-              ariaLabel="Quantity needed"
-            />
-            <button type="submit" className="key sm pri">
-              + Add
-            </button>
-          </form>
-
-          {shoppingList.length > 0 ? (
-            <div className="sp-scroll-y" style={{ paddingRight: "6px" }}>
-              {shoppingList.map((item, idx) => {
-                const isChecked = !!(item.checked || item.bought);
-                const detailText =
-                  item.quantityNeeded !== undefined
-                    ? `${item.quantityNeeded} needed`
-                    : item.urgency || "Restock";
-                return (
-                  <button
-                    key={`${item.name}-${idx}`}
-                    type="button"
-                    className="li"
-                    aria-pressed={isChecked}
-                    onClick={() => onToggleItem && onToggleItem(idx)}
-                  >
-                    <i />
-                    <span>{item.name}</span>
-                    <small>{detailText}</small>
-                  </button>
-                );
-              })}
             </div>
-          ) : (
-            <p className="lab" style={{ padding: "18px 0", textAlign: "center" }}>
-              Your shopping list is empty. Everything is stocked up!
-            </p>
-          )}
+          </div>
+        )}
+
+        {shoppingList.length > 0 ? (
+          <div className="sp-scroll-y" style={{ paddingRight: "6px" }}>
+            {shoppingList.map((item, idx) => {
+              const isChecked = !!(item.checked || item.bought);
+              const detailText =
+                item.quantityNeeded !== undefined
+                  ? `${item.quantityNeeded} needed`
+                  : item.urgency || "Restock";
+              return (
+                <button
+                  key={`${item.name}-${idx}`}
+                  type="button"
+                  className="li"
+                  aria-pressed={isChecked}
+                  onClick={() => onToggleItem && onToggleItem(idx)}
+                >
+                  <i />
+                  <span>{item.name}</span>
+                  <small>{detailText}</small>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="lab" style={{ padding: "18px 0" }}>
+            Your shopping list is empty. Everything is stocked up!
+          </p>
+        )}
       </div>
     </section>
   );
