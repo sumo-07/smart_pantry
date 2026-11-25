@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import ShoppingListCard from "../components/ShoppingListCard";
-import LoadingSkeleton from "../components/LoadingSkeleton";
-import { ShoppingBag, Copy, Check, Download } from "lucide-react";
 
 function escapeCsvCell(value) {
   const str = String(value ?? "");
@@ -17,15 +14,30 @@ export default function ShoppingList({
   onAddItem,
   isLoading
 }) {
+  const [newName, setNewName] = useState("");
+  const [newQty, setNewQty] = useState(1);
   const [copied, setCopied] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-        <LoadingSkeleton />
-      </div>
+      <section className="view">
+        <div className="lcd" style={{ textAlign: "center", padding: "32px" }}>
+          LOADING SHOPPING LIST...
+        </div>
+      </section>
     );
   }
+
+  const remainingCount = shoppingList.filter((item) => !item.checked && !item.bought).length;
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    const trimmed = newName.trim();
+    if (!trimmed || !onAddItem) return;
+    await onAddItem(trimmed, Math.max(1, parseInt(newQty, 10) || 1));
+    setNewName("");
+    setNewQty(1);
+  };
 
   const handleCopyList = async () => {
     if (shoppingList.length === 0) return;
@@ -35,10 +47,8 @@ export default function ShoppingList({
       const cat = item.category ? ` [${item.category}]` : "";
       return `${mark} ${item.name}${qty}${cat}`;
     });
-    const text = `Smart Pantry Shopping List:\n${lines.join("\n")}`;
-
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(`Smart Pantry Shopping List:\n${lines.join("\n")}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -55,7 +65,6 @@ export default function ShoppingList({
       escapeCsvCell(item.category || "Other"),
       escapeCsvCell(item.checked || item.bought ? "Purchased" : "Pending")
     ]);
-
     const csvContent = [header.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -69,54 +78,83 @@ export default function ShoppingList({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border pb-5">
+    <section className="view">
+      <div className="top">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-            <ShoppingBag className="h-7 w-7 text-indigo-400" />
-            Shopping List
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Review restocks calculated by AI scans or add custom entries.
-          </p>
+          <h1 className="sp-h1">Shopping list</h1>
+          <p>Built from items that are low, critical or out of stock.</p>
         </div>
 
-        {shoppingList.length > 0 && (
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <button
-              onClick={handleCopyList}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-gray-700 text-xs font-semibold text-gray-200 hover:text-white transition cursor-pointer"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-emerald-300">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 text-indigo-400" />
-                  Copy List
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={handleExportCsv}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-semibold text-indigo-300 transition cursor-pointer"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export CSV
-            </button>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          {shoppingList.length > 0 && (
+            <>
+              <button type="button" className="key sm" onClick={handleCopyList}>
+                {copied ? "Copied!" : "Copy list"}
+              </button>
+              <button type="button" className="key sm pri" onClick={handleExportCsv}>
+                Export CSV
+              </button>
+            </>
+          )}
+          <div className="lcd" style={{ padding: "8px 18px" }}>
+            <span style={{ fontSize: "34px" }}>{remainingCount}</span> TO BUY
           </div>
-        )}
+        </div>
       </div>
 
-      <ShoppingListCard
-        items={shoppingList}
-        onToggleItem={onToggleItem}
-        onAddItem={onAddItem}
-      />
-    </div>
+      <div className="mod" style={{ maxWidth: "720px" }}>
+        <form onSubmit={handleAddSubmit} className="tools" style={{ marginTop: 0, marginBottom: "14px" }}>
+          <input
+            type="text"
+            className="field"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Add item to shopping list"
+            aria-label="Add item to shopping list"
+          />
+          <input
+            type="number"
+            min="1"
+            className="field"
+            value={newQty}
+            onChange={(e) => setNewQty(e.target.value)}
+            aria-label="Quantity needed"
+            style={{ maxWidth: "85px", flex: "none" }}
+          />
+          <button type="submit" className="key sm pri">
+            + Add
+          </button>
+        </form>
+
+        {shoppingList.length > 0 ? (
+          <div>
+            {shoppingList.map((item, idx) => {
+              const isChecked = !!(item.checked || item.bought);
+              const detailText =
+                item.quantityNeeded !== undefined
+                  ? `${item.quantityNeeded} needed`
+                  : item.urgency || "Restock";
+              return (
+                <button
+                  key={`${item.name}-${idx}`}
+                  type="button"
+                  className="li"
+                  aria-pressed={isChecked}
+                  onClick={() => onToggleItem && onToggleItem(idx)}
+                >
+                  <i />
+                  <span>{item.name}</span>
+                  <small>{detailText}</small>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="lab" style={{ padding: "18px 0" }}>
+            Your shopping list is empty. Everything is stocked up!
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

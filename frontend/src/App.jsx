@@ -1,7 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Sidebar from "./components/Sidebar";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import ScanUpload from "./pages/ScanUpload";
@@ -510,30 +509,27 @@ function AppContent() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-brand-dark flex flex-col justify-center items-center">
-        <Loader2 className="h-10 w-10 text-indigo-400 animate-spin" />
-        <span className="text-xs text-gray-500 mt-2.5 font-semibold tracking-wider">SECURE AUTH INITIALIZING...</span>
+      <div className="view" style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <div className="lcd" style={{ textAlign: "center" }}>
+          <Loader2 className="h-8 w-8 animate-spin" style={{ margin: "0 auto 8px" }} />
+          <div>INITIALIZING AUTH...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-brand-dark flex flex-col">
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Navbar familySize={familySize} />
 
-      <div className="flex flex-1">
-        {/* Show sidebar only if user has a configured session */}
-        {user && familySize && <Sidebar familySize={familySize} />}
-
-        <main className="flex-1 overflow-y-auto">
-          <Suspense
-            fallback={
-              <div className="flex flex-col justify-center items-center h-64">
-                <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
-                <span className="text-xs text-gray-500 mt-2 font-semibold tracking-wider">LOADING...</span>
-              </div>
-            }
-          >
+      <main style={{ flex: 1 }}>
+        <Suspense
+          fallback={
+            <div className="view" style={{ display: "grid", placeItems: "center", minHeight: "40vh" }}>
+              <div className="lcd">LOADING MODULE...</div>
+            </div>
+          }
+        >
             <Routes>
             {/* Landing Page - Accessible to everyone */}
             <Route path="/" element={<LandingPage userId={user && familySize ? userId : null} />} />
@@ -625,9 +621,8 @@ function AppContent() {
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          </Suspense>
-        </main>
-      </div>
+        </Suspense>
+      </main>
     </div>
   );
 }
