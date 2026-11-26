@@ -52,8 +52,12 @@
 
 html {
   scroll-padding-top: env(safe-area-inset-top, 0px);
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   height: 100%;
+}
+
+html.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
 }
 
 *, *::before, *::after {
@@ -67,7 +71,7 @@ body {
   font-family: var(--sans);
   line-height: 1.5;
   min-height: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   transition: background-color .22s ease, color .22s ease;
 }
 

@@ -1,5 +1,7 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import Lenis from "lenis";
+import "lenis/dist/lenis.css";
 import Navbar from "./components/Navbar";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
@@ -30,6 +32,39 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const userId = user ? user.uid : null;
+  const { pathname } = useLocation();
+  const lenisRef = useRef(null);
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      lerp: 0.1,
+      smoothWheel: true,
+      allowNestedScroll: true,
+      respectReducedMotion: true,
+    });
+    lenisRef.current = lenis;
+
+    let rafId;
+    function raf(time) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { immediate: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
 
   const [familySize, setFamilySize] = useState(() => {
     try {
