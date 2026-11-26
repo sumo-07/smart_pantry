@@ -212,7 +212,7 @@ export default function InventoryTable({
                   <span className="d" data-lab="Rate: ">
                     {item.consumed !== undefined ? `${item.dailyRate ?? 0}/d` : "-"}
                   </span>
-                  <span data-lab="Left: ">{formatDaysLeft(item.daysLeft)}</span>
+                  <span className="d" data-lab="Left: ">{formatDaysLeft(item.daysLeft)}</span>
                   <span className={`st ${code}`}>{item.status}</span>
                 </div>
               );
