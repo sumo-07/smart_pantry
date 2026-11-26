@@ -677,7 +677,7 @@ export default function ScanUpload({
                         className="bl-h"
                         aria-expanded={isOpen}
                         onClick={() =>
-                          setOpenBaselines((prev) => ({ ...prev, [cycle.id]: !prev[cycle.id] }))
+                          setOpenBaselines((prev) => (prev[cycle.id] ? {} : { [cycle.id]: true }))
                         }
                       >
                         <div className="tt">
@@ -777,7 +777,7 @@ export default function ScanUpload({
                           className="key sm"
                           aria-expanded={isOpen}
                           onClick={() =>
-                            setOpenCompleted((prev) => ({ ...prev, [cycle.id]: !prev[cycle.id] }))
+                            setOpenCompleted((prev) => (prev[cycle.id] ? {} : { [cycle.id]: true }))
                           }
                         >
                           {isOpen ? "Hide details" : "View items"}
