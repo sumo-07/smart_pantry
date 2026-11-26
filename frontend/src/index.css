@@ -1267,8 +1267,13 @@ body::before {
   .sp-header { padding: 12px 4vw; gap: 8px; }
   .brand { font-size: 16px; gap: 8px; }
   .brand small { font-size: 12px; padding: 2px 7px; }
-  .mod { padding: 16px; border-radius: 20px; }
-  .lcd { border-width: 6px; padding: 12px 14px; }
+  .grid { gap: 10px; }
+  .mod { padding: 13px 14px; border-radius: 18px; }
+  .lcd { border-width: 5px; padding: 10px 12px; border-radius: 14px; font-size: 12px; }
+  .big { font-size: 44px; margin: 2px 0; }
+  .small { font-size: 28px; margin: 4px 0; }
+  .leds { gap: 3px; margin-top: 8px; }
+  .leds i { width: 7px; height: 14px; }
   .scan { width: 84px; height: 84px; font-size: 17px; }
   .pads { grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .bl-h { flex-wrap: wrap; padding: 14px; }
