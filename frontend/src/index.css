@@ -1046,12 +1046,8 @@ body::before {
 }
 
 .bl-b {
-  display: none;
-  padding: 0 20px 18px;
-}
-
-.cyc-card.open .bl-b {
   display: block;
+  padding: 0 20px 18px;
 }
 
 .due {
@@ -1186,14 +1182,10 @@ body::before {
 }
 
 .cy-b {
-  display: none;
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   margin-top: 14px;
-}
-
-.cy.open .cy-b {
-  display: grid;
 }
 
 .cy-b .lcd {

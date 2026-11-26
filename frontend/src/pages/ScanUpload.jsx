@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { compressImage } from "../utils/compressImage";
 import { areItemsIdentical } from "../utils/itemNormalizer";
 import NumberStepper from "../components/NumberStepper";
@@ -698,50 +699,62 @@ export default function ScanUpload({
                         </span>
                       </button>
 
-                      <div className="bl-b">
-                        <div
-                          className="lab"
-                          style={{ color: "inherit", opacity: 0.7, fontFamily: "var(--sans)", marginBottom: "8px" }}
-                        >
-                          BASELINE ITEMS ({(b.items || []).length})
-                        </div>
-                        <div className="chips">
-                          {(b.items || []).map((item, idx) => (
-                            <span key={`${item.name}-${idx}`}>
-                              {item.name}
-                              <b>×{item.quantity}</b>
-                            </span>
-                          ))}
-                        </div>
-                        <div className="cyc-foot">
-                          <span className="lab" style={{ color: "inherit", opacity: 0.7, fontFamily: "var(--sans)" }}>
-                            Upload a follow-up image to compare against this baseline.
-                          </span>
-                          <span style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                            {onDeleteScan && (
-                              <button
-                                type="button"
-                                className={`key sm del${isArmed ? " arm" : ""}`}
-                                disabled={deletingId === cycle.id}
-                                onClick={() => handleDeleteBaseline(cycle.id)}
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.24, ease: "easeInOut" }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            <div className="bl-b">
+                              <div
+                                className="lab"
+                                style={{ color: "inherit", opacity: 0.7, fontFamily: "var(--sans)", marginBottom: "8px" }}
                               >
-                                {deletingId === cycle.id
-                                  ? "Deleting..."
-                                  : isArmed
-                                  ? "Confirm delete?"
-                                  : "Delete cycle"}
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="key sm pri"
-                              onClick={() => handlePairFollowUp(cycle.id)}
-                            >
-                              Pair with follow-up scan
-                            </button>
-                          </span>
-                        </div>
-                      </div>
+                                BASELINE ITEMS ({(b.items || []).length})
+                              </div>
+                              <div className="chips">
+                                {(b.items || []).map((item, idx) => (
+                                  <span key={`${item.name}-${idx}`}>
+                                    {item.name}
+                                    <b>×{item.quantity}</b>
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="cyc-foot">
+                                <span className="lab" style={{ color: "inherit", opacity: 0.7, fontFamily: "var(--sans)" }}>
+                                  Upload a follow-up image to compare against this baseline.
+                                </span>
+                                <span style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                                  {onDeleteScan && (
+                                    <button
+                                      type="button"
+                                      className={`key sm del${isArmed ? " arm" : ""}`}
+                                      disabled={deletingId === cycle.id}
+                                      onClick={() => handleDeleteBaseline(cycle.id)}
+                                    >
+                                      {deletingId === cycle.id
+                                        ? "Deleting..."
+                                        : isArmed
+                                        ? "Confirm delete?"
+                                        : "Delete cycle"}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="key sm pri"
+                                    onClick={() => handlePairFollowUp(cycle.id)}
+                                  >
+                                    Pair with follow-up scan
+                                  </button>
+                                </span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })
@@ -784,27 +797,39 @@ export default function ScanUpload({
                         </button>
                       </div>
 
-                      <div className="cy-b">
-                        <div className="lcd">
-                          <div className="lab">BASELINE ITEMS ({(b.items || []).length})</div>
-                          {(b.items || []).map((item, idx) => (
-                            <div className="r" key={`${item.name}-${idx}`}>
-                              <span>{item.name}</span>
-                              <em>QTY: {item.quantity}</em>
-                            </div>
-                          ))}
-                        </div>
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.24, ease: "easeInOut" }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            <div className="cy-b">
+                              <div className="lcd">
+                                <div className="lab">BASELINE ITEMS ({(b.items || []).length})</div>
+                                {(b.items || []).map((item, idx) => (
+                                  <div className="r" key={`${item.name}-${idx}`}>
+                                    <span>{item.name}</span>
+                                    <em>QTY: {item.quantity}</em>
+                                  </div>
+                                ))}
+                              </div>
 
-                        <div className="lcd fu">
-                          <div className="lab">FOLLOW-UP SNAPSHOT ITEMS ({(f.items || []).length})</div>
-                          {(f.items || []).map((item, idx) => (
-                            <div className="r" key={`${item.name}-${idx}`}>
-                              <span>{item.name}</span>
-                              <em>QTY: {item.quantity}</em>
+                              <div className="lcd fu">
+                                <div className="lab">FOLLOW-UP SNAPSHOT ITEMS ({(f.items || []).length})</div>
+                                {(f.items || []).map((item, idx) => (
+                                  <div className="r" key={`${item.name}-${idx}`}>
+                                    <span>{item.name}</span>
+                                    <em>QTY: {item.quantity}</em>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })
