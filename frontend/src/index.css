@@ -86,36 +86,37 @@ body::before {
   background: var(--bg);
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 12px;
+  gap: 8px 10px;
   align-items: center;
-  padding: 14px 4vw;
+  padding: 12px 3vw;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   margin-right: auto;
   color: var(--ink);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .brand small {
   font-family: var(--dot);
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
   background: var(--lcd);
   color: var(--lcdink);
-  padding: 2px 10px;
+  padding: 2px 9px;
   border-radius: 6px;
 }
 
 .sp-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .lab {
@@ -157,6 +158,12 @@ body::before {
 .key:disabled {
   opacity: .55;
   cursor: wait;
+}
+
+.key.nav {
+  padding: 9px 13px;
+  font-size: 13px;
+  gap: 8px;
 }
 
 .key.nav::before {
@@ -1220,8 +1227,12 @@ body::before {
 }
 
 /* Responsive Breakpoints */
-@media (max-width: 1160px) {
-  .desktop-nav, .desktop-only, .user div { display: none; }
+@media (max-width: 1380px) {
+  .user div { display: none; }
+}
+
+@media (max-width: 1100px) {
+  .desktop-nav, .desktop-only { display: none; }
   .mobile-menu-btn { display: inline-flex; }
 }
 
