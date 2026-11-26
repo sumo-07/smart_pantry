@@ -1290,33 +1290,38 @@ body::before {
 
 @media (max-width: 720px) {
   .cy-b { grid-template-columns: 1fr; }
-  .scroll { overflow-x: hidden; }
+  .scroll { overflow-x: hidden; max-height: 440px; }
   .inv { min-width: 0; width: 100%; }
   .ir.hd { display: none; }
   .ir {
-    grid-template-columns: 14px 1fr auto;
-    gap: 8px 10px;
-    padding: 12px 0;
+    grid-template-columns: 14px minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 10px 10px;
+    padding: 14px 2px;
   }
-  .ir > :nth-child(1) { grid-column: 1; grid-row: 1; }
-  .ir > :nth-child(2) { grid-column: 2; grid-row: 1; min-width: 0; }
-  .ir > :nth-child(7) { grid-column: 3; grid-row: 1; justify-self: end; }
-  .ir > :nth-child(3) { grid-column: 2 / 4; grid-row: 2; }
+  .ir > :nth-child(1) { grid-column: 1; grid-row: 1; align-self: start; margin-top: 5px; }
+  .ir > :nth-child(2) { grid-column: 2 / 4; grid-row: 1; min-width: 0; }
+  .ir > :nth-child(7) { grid-column: 4; grid-row: 1; justify-self: end; align-self: start; }
+  .ir > :nth-child(3) { grid-column: 2 / 5; grid-row: 2; }
   .ir > :nth-child(4),
   .ir > :nth-child(5),
   .ir > :nth-child(6) {
     grid-row: 3;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.2;
   }
   .ir > :nth-child(4) { grid-column: 2; justify-self: start; }
-  .ir > :nth-child(5) { grid-column: 2; justify-self: center; font-size: 15px; }
-  .ir > :nth-child(6) { grid-column: 3; justify-self: end; }
+  .ir > :nth-child(5) { grid-column: 3; justify-self: start; }
+  .ir > :nth-child(6) { grid-column: 4; justify-self: end; text-align: right; }
   .ir [data-lab]::before {
     content: attr(data-lab);
+    display: block;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
     color: var(--mut);
+    margin-bottom: 3px;
   }
 }
 
