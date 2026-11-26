@@ -143,7 +143,7 @@ export default function Register() {
           </label>
 
           {password.length > 0 && (
-            <div style={{ display: "grid", gap: "6px", padding: "10px 12px", borderRadius: "10px", border: "1px solid var(--line)", background: "rgba(255,255,255,0.02)" }}>
+            <div style={{ display: "grid", gap: "6px", padding: "10px 12px", borderRadius: "10px", border: "1px solid var(--edge)", background: "rgba(255,255,255,0.02)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "4px 10px" }}>
                 {ruleResults.map((rule) => (
                   <span
@@ -151,7 +151,7 @@ export default function Register() {
                     className="lab"
                     style={{
                       fontSize: "11px",
-                      color: rule.passed ? "var(--g)" : "var(--ink-3)",
+                      color: rule.passed ? "var(--g)" : "var(--mut)",
                       fontWeight: rule.passed ? 600 : 500,
                     }}
                   >
