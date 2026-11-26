@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 function ScanColumn({
   title,
@@ -187,7 +188,10 @@ export default function ScanDetailModal({ cycle, onClose, onDeleteScan, onDelete
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.18 }}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -200,7 +204,10 @@ export default function ScanDetailModal({ cycle, onClose, onDeleteScan, onDelete
         padding: "16px"
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         className="mod"
         onClick={(e) => e.stopPropagation()}
         style={{ width: "100%", maxWidth: "980px", maxHeight: "90vh", overflowY: "auto", display: "grid", gap: "18px" }}
@@ -281,7 +288,7 @@ export default function ScanDetailModal({ cycle, onClose, onDeleteScan, onDelete
             <span className="lab">Press ESC or click outside to close</span>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function InventoryTable({
   items = [],
@@ -101,43 +102,49 @@ export default function InventoryTable({
               />
             </button>
 
-            {catMenuOpen && (
-              <div
-                className="mod"
-                role="listbox"
-                aria-label="Categories"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: "calc(100% + 8px)",
-                  zIndex: 20,
-                  padding: "10px",
-                  minWidth: "185px",
-                  maxHeight: "240px",
-                  overflowY: "auto",
-                  display: "grid",
-                  gap: "6px",
-                  borderRadius: "16px"
-                }}
-              >
-                {availableCategories.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    role="option"
-                    aria-selected={categoryFilter === cat}
-                    className={`key sm${categoryFilter === cat ? " on" : ""}`}
-                    onClick={() => {
-                      setCategoryFilter(cat);
-                      setCatMenuOpen(false);
-                    }}
-                    style={{ width: "100%", justifyContent: "flex-start" }}
-                  >
-                    {cat === "All" ? "All categories" : cat}
-                  </button>
-                ))}
-              </div>
-            )}
+            <AnimatePresence>
+              {catMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
+                  className="mod"
+                  role="listbox"
+                  aria-label="Categories"
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: "calc(100% + 8px)",
+                    zIndex: 20,
+                    padding: "10px",
+                    minWidth: "185px",
+                    maxHeight: "240px",
+                    overflowY: "auto",
+                    display: "grid",
+                    gap: "6px",
+                    borderRadius: "16px"
+                  }}
+                >
+                  {availableCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      role="option"
+                      aria-selected={categoryFilter === cat}
+                      className={`key sm${categoryFilter === cat ? " on" : ""}`}
+                      onClick={() => {
+                        setCategoryFilter(cat);
+                        setCatMenuOpen(false);
+                      }}
+                      style={{ width: "100%", justifyContent: "flex-start" }}
+                    >
+                      {cat === "All" ? "All categories" : cat}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>

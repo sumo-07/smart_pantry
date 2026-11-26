@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Sun, Moon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar({ familySize }) {
@@ -135,31 +136,42 @@ export default function Navbar({ familySize }) {
       </div>
 
       {/* Mobile Dropdown Drawer */}
-      {user && menuOpen && (
-        <div className="mod mobile-drawer" role="dialog" aria-label="Mobile navigation">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "10px", borderBottom: "2px solid var(--off)" }}>
-            <div>
-              <b style={{ fontSize: "14px" }}>{displayName}</b>
-              <div className="lab">Family of {familySize || 4}</div>
+      <AnimatePresence>
+        {user && menuOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="mod mobile-drawer"
+            style={{ overflow: "hidden" }}
+            role="dialog"
+            aria-label="Mobile navigation"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "10px", borderBottom: "2px solid var(--off)" }}>
+              <div>
+                <b style={{ fontSize: "14px" }}>{displayName}</b>
+                <div className="lab">Family of {familySize || 4}</div>
+              </div>
+              <button type="button" className="key sm del" onClick={handleLogout}>
+                Logout
+              </button>
             </div>
-            <button type="button" className="key sm del" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-          <nav className="mobile-nav-list" aria-label="Mobile">
-            {navLinks.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`key nav${isActive(item.to) ? " on" : ""}`}
-                style={{ width: "100%", justifyContent: "flex-start" }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
+            <nav className="mobile-nav-list" aria-label="Mobile">
+              {navLinks.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`key nav${isActive(item.to) ? " on" : ""}`}
+                  style={{ width: "100%", justifyContent: "flex-start" }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

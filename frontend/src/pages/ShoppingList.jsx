@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Download, Check, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import NumberStepper from "../components/NumberStepper";
 
 function escapeCsvCell(value) {
@@ -184,44 +185,50 @@ export default function ShoppingList({
                   )}
                 </button>
 
-                {exportMenuOpen && (
-                  <div
-                    className="mod"
-                    role="menu"
-                    style={{
-                      position: "absolute",
-                      right: 0,
-                      top: "calc(100% + 8px)",
-                      zIndex: 20,
-                      padding: "10px",
-                      minWidth: "190px",
-                      display: "grid",
-                      gap: "8px",
-                      borderRadius: "16px"
-                    }}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="key sm"
-                      onClick={handleCopyList}
-                      style={{ width: "100%", justifyContent: "flex-start" }}
+                <AnimatePresence>
+                  {exportMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                      transition={{ duration: 0.16, ease: "easeOut" }}
+                      className="mod"
+                      role="menu"
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "calc(100% + 8px)",
+                        zIndex: 20,
+                        padding: "10px",
+                        minWidth: "190px",
+                        display: "grid",
+                        gap: "8px",
+                        borderRadius: "16px"
+                      }}
                     >
-                      <ClipboardCopy size={14} />
-                      Copy to clipboard
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="key sm pri"
-                      onClick={handleExportCsv}
-                      style={{ width: "100%", justifyContent: "flex-start" }}
-                    >
-                      <Download size={14} />
-                      Export CSV
-                    </button>
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="key sm"
+                        onClick={handleCopyList}
+                        style={{ width: "100%", justifyContent: "flex-start" }}
+                      >
+                        <ClipboardCopy size={14} />
+                        Copy to clipboard
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="key sm pri"
+                        onClick={handleExportCsv}
+                        style={{ width: "100%", justifyContent: "flex-start" }}
+                      >
+                        <Download size={14} />
+                        Export CSV
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           )}
