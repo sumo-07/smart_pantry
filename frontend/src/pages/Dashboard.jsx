@@ -1,26 +1,27 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Package,
-  AlertTriangle,
-  Users,
-  Clock,
-  Plus,
-  BarChart3,
-  Camera,
-  ShoppingCart,
-  ArrowRight,
-  Eye
-} from "lucide-react";
-import StatCard from "../components/StatCard";
 import InventoryTable from "../components/InventoryTable";
-import LoadingSkeleton from "../components/LoadingSkeleton";
-import EmptyState from "../components/EmptyState";
 import ScanDetailModal from "../components/ScanDetailModal";
 
-/**
- * Groups chronological scans into Restock Cycles (each Baseline + its Follow-up scans counted as 1 pair).
- */
+function useResponsivePadsPerPage() {
+  const getCount = () => {
+    if (typeof window === "undefined") return 13;
+    if (window.innerWidth <= 600) return 10; // 2 clean rows of 5
+    if (window.innerWidth <= 900) return 14; // 2 clean rows of 7
+    return 13; // 1 clean row of 13
+  };
+
+  const [count, setCount] = useState(getCount);
+
+  useEffect(() => {
+    const onResize = () => setCount(getCount());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return count;
+}
+
 function groupScansIntoCycles(scans) {
   const cycles = [];
   const baselineMap = new Map();
@@ -58,8 +59,8 @@ function groupScansIntoCycles(scans) {
       day: "numeric"
     });
     const isLatest = index === cycles.length - 1;
-    const title = isLatest ? `Current Cycle · ${dateLabel}` : `Cycle #${index + 1} · ${dateLabel}`;
-    return { ...cycle, title };
+    const title = isLatest ? `Current cycle · ${dateLabel}` : `Cycle #${index + 1} · ${dateLabel}`;
+    return { ...cycle, number: index + 1, title };
   });
 }
 
@@ -72,9 +73,40 @@ export default function Dashboard({
   onDeleteScan,
   onDeleteScanPair
 }) {
-  const [selectedCycleId, setSelectedCycleId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
-  const [showAllCycles, setShowAllCycles] = useState(false);
+  const [animatedCount, setAnimatedCount] = useState(0);
+  const [selectedCycleId, setSelectedCycleId] = useState(null);
+  const [modalCycleId, setModalCycleId] = useState(null);
+  const [padPage, setPadPage] = useState(1);
+
+  const padsPerPage = useResponsivePadsPerPage();
+  const cycles = useMemo(() => groupScansIntoCycles(scans), [scans]);
+  const totalCycles = cycles.length;
+  const totalPages = Math.max(1, Math.ceil(totalCycles / padsPerPage));
+
+  useEffect(() => {
+    if (totalCycles > 0) {
+      setPadPage(Math.ceil(totalCycles / padsPerPage));
+      setSelectedCycleId(cycles[cycles.length - 1].id);
+    }
+  }, [totalCycles, padsPerPage]);
+
+  const itemsTrackedCount = predictions.length || scans[scans.length - 1]?.items?.length || 0;
+
+  useEffect(() => {
+    if (itemsTrackedCount <= 0) {
+      setAnimatedCount(0);
+      return;
+    }
+    let val = 0;
+    const step = Math.max(1, Math.ceil(itemsTrackedCount / 25));
+    const timer = setInterval(() => {
+      val = Math.min(itemsTrackedCount, val + step);
+      setAnimatedCount(val);
+      if (val >= itemsTrackedCount) clearInterval(timer);
+    }, 35);
+    return () => clearInterval(timer);
+  }, [itemsTrackedCount]);
 
   const healthCounts = useMemo(() => {
     const healthy = predictions.filter((p) => p.status === "Healthy").length;
@@ -84,173 +116,178 @@ export default function Dashboard({
     return { healthy, low, critical, total };
   }, [predictions]);
 
-  const orderedCycles = useMemo(() => {
-    return groupScansIntoCycles(scans).reverse();
-  }, [scans]);
-
-  const selectedCycle = useMemo(
-    () => orderedCycles.find((c) => c.id === selectedCycleId) || null,
-    [orderedCycles, selectedCycleId]
-  );
-
-  const activeCycleInfo = useMemo(() => {
-    if (orderedCycles.length === 0) return null;
-    const latest = orderedCycles[0];
+  const activeCycleStart = useMemo(() => {
+    if (cycles.length === 0) return "";
+    const latest = cycles[cycles.length - 1];
     const anchor = latest.baseline || latest.followUps[0];
-    const startLabel = new Date(anchor.timestamp).toLocaleDateString(undefined, {
+    return new Date(anchor.timestamp).toLocaleDateString(undefined, {
       month: "short",
       day: "numeric"
     });
-    return { startLabel, totalCycles: orderedCycles.length };
-  }, [orderedCycles]);
+  }, [cycles]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          {[1, 2, 3, 4].map((n) => (
-            <LoadingSkeleton key={n} />
-          ))}
+      <section className="view">
+        <div className="lcd" style={{ textAlign: "center", padding: "32px" }}>
+          LOADING PANTRY TELEMETRY...
         </div>
-        <LoadingSkeleton type="table" />
-      </div>
+      </section>
     );
   }
 
   if (scans.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        <EmptyState />
-      </div>
+      <section className="view">
+        <div className="top">
+          <div>
+            <h1 className="sp-h1">Pantry dashboard</h1>
+            <p>No scans recorded yet. Upload your first pantry photo to start tracking.</p>
+          </div>
+          <Link className="key pri" to="/scan">
+            + Upload scan
+          </Link>
+        </div>
+        <div className="mod">
+          <div className="lcd" style={{ textAlign: "center", padding: "36px" }}>
+            NO ACTIVE INVENTORY · PRESS UPLOAD SCAN TO BEGIN
+          </div>
+        </div>
+      </section>
     );
   }
 
-  const itemsTrackedCount = predictions.length || scans[scans.length - 1]?.items?.length || 0;
-  const itemsRunningLowCount = healthCounts.low + healthCounts.critical;
-  const predictedRestocksCount = healthCounts.critical;
-  const pendingShoppingItems = shoppingList.filter((item) => !item.bought);
-  const visibleCycles = showAllCycles ? orderedCycles : orderedCycles.slice(0, 4);
+  const needsAttentionCount = healthCounts.low + healthCounts.critical;
+  const criticalCount = healthCounts.critical;
+  const padStart = (padPage - 1) * padsPerPage;
+  const visiblePadCycles = cycles.slice(padStart, padStart + padsPerPage);
+  const selectedCycle = cycles.find((c) => c.id === selectedCycleId) || cycles[cycles.length - 1];
+  const modalCycle = cycles.find((c) => c.id === modalCycleId) || null;
+
+  const restockItems = predictions.filter((p) => p.status === "Critical" || p.status === "Low");
+  const pendingShoppingCount = shoppingList.filter((i) => !i.checked && !i.bought).length;
+  const queueItems = restockItems.length > 0 ? restockItems : shoppingList;
+
+  const healthyPct = healthCounts.total ? Math.round((healthCounts.healthy / healthCounts.total) * 100) : 100;
+  const lowPct = healthCounts.total ? Math.round((healthCounts.low / healthCounts.total) * 100) : 0;
+  const criticalPct = healthCounts.total ? Math.max(0, 100 - healthyPct - lowPct) : 0;
+
+  const padNumber = (n) => String(n).padStart(2, "0");
+
+  const renderCycleSummary = (cycle) => {
+    if (!cycle) return "";
+    const latestFollowUp = cycle.followUps[cycle.followUps.length - 1];
+    const baseCount = cycle.baseline?.items?.length || 0;
+    const followCount = latestFollowUp?.items?.length || 0;
+    if (cycle.baseline && latestFollowUp) {
+      return `Baseline + follow-up · ${baseCount} → ${followCount} items`;
+    }
+    if (cycle.baseline) {
+      return `Baseline only · ${baseCount} items`;
+    }
+    return `Follow-up scan · ${followCount} items`;
+  };
 
   return (
-    <div className="space-y-7 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Clean Header Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-border pb-5">
-        <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Pantry Dashboard
-          </h2>
-          <p className="text-sm text-gray-400">
-            {activeCycleInfo
-              ? `Active cycle started ${activeCycleInfo.startLabel} · ${activeCycleInfo.totalCycles} scan cycle${activeCycleInfo.totalCycles > 1 ? "s" : ""} recorded`
-              : "Scan-driven consumption analysis and stock tracking."}
+    <section className="view">
+      <div className="top">
+        <div>
+          <h1 className="sp-h1">Pantry dashboard</h1>
+          <p>
+            Active cycle started {activeCycleStart} · {totalCycles} scan cycle{totalCycles === 1 ? "" : "s"} recorded
           </p>
         </div>
-
-        <Link
-          to="/scan"
-          className="glow-btn inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Upload Scan
+        <Link className="key pri" to="/scan">
+          + Upload scan
         </Link>
       </div>
 
-      {/* KPI Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard
-          title="Items Tracked"
-          value={itemsTrackedCount}
-          icon={Package}
-          description="Active items in current cycle"
-          delay={0}
-        />
-        <StatCard
-          title="Needs Attention"
-          value={itemsRunningLowCount}
-          icon={AlertTriangle}
-          description="Low or Critical supply"
-          trend={
-            itemsRunningLowCount > 0
-              ? { type: "negative", value: `${itemsRunningLowCount} items`, label: "running low" }
-              : null
-          }
-          delay={0.05}
-        />
-        <StatCard
-          title="Critical Restocks"
-          value={predictedRestocksCount}
-          icon={BarChart3}
-          description="Depleting in <= 1 day"
-          delay={0.1}
-        />
-        <StatCard
-          title="Household Size"
-          value={familySize ? `${familySize}` : "-"}
-          icon={Users}
-          description="Configured family members"
-          delay={0.15}
-        />
-      </div>
-
-      {/* Compact Stock Health Bar */}
-      {healthCounts.total > 0 && (
-        <div className="glass-panel rounded-2xl px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-              Stock Health
-            </span>
-            <div className="flex items-center gap-3 text-xs">
-              <button
-                onClick={() => setStatusFilter(statusFilter === "Healthy" ? "All" : "Healthy")}
-                className="inline-flex items-center gap-1.5 text-emerald-400 hover:underline cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                {healthCounts.healthy} Healthy
-              </button>
-              <button
-                onClick={() => setStatusFilter(statusFilter === "Low" ? "All" : "Low")}
-                className="inline-flex items-center gap-1.5 text-amber-400 hover:underline cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                {healthCounts.low} Low
-              </button>
-              <button
-                onClick={() => setStatusFilter(statusFilter === "Critical" ? "All" : "Critical")}
-                className="inline-flex items-center gap-1.5 text-rose-400 hover:underline cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full bg-rose-400" />
-                {healthCounts.critical} Critical
-              </button>
-            </div>
+      <div className="grid">
+        {/* KPI 1: Items tracked */}
+        <div className="mod s5">
+          <div className="lab">Items tracked</div>
+          <div className="lcd" style={{ marginTop: "12px" }}>
+            <span className="big">{animatedCount}</span>
+            <span>ACTIVE ITEMS IN CURRENT CYCLE</span>
           </div>
-
-          <div className="w-full sm:w-64 h-2.5 rounded-full bg-gray-800 overflow-hidden flex">
-            {healthCounts.healthy > 0 && (
-              <div
-                style={{ width: `${(healthCounts.healthy / healthCounts.total) * 100}%` }}
-                className="bg-emerald-500 transition-all duration-500"
+          <div
+            className="leds"
+            aria-label={`${healthCounts.healthy} healthy, ${healthCounts.low} low, ${healthCounts.critical} critical`}
+          >
+            {Array.from({ length: Math.min(healthCounts.healthy, 30) }).map((_, i) => (
+              <i key={`g-${i}`} className="g" style={{ "--i": i }} />
+            ))}
+            {Array.from({ length: Math.min(healthCounts.low, 15) }).map((_, i) => (
+              <i key={`y-${i}`} className="y" style={{ "--i": healthCounts.healthy + i }} />
+            ))}
+            {Array.from({ length: Math.min(healthCounts.critical, 15) }).map((_, i) => (
+              <i
+                key={`r-${i}`}
+                className="r"
+                style={{ "--i": healthCounts.healthy + healthCounts.low + i }}
               />
-            )}
-            {healthCounts.low > 0 && (
-              <div
-                style={{ width: `${(healthCounts.low / healthCounts.total) * 100}%` }}
-                className="bg-amber-500 transition-all duration-500"
-              />
-            )}
-            {healthCounts.critical > 0 && (
-              <div
-                style={{ width: `${(healthCounts.critical / healthCounts.total) * 100}%` }}
-                className="bg-rose-500 transition-all duration-500"
-              />
-            )}
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Main 2-Column Spacious Layout */}
-      <div className="grid grid-cols-1 layout-split:grid-cols-12 gap-6 items-start">
-        {/* Left/Main: Tracked Inventory Table */}
-        <div className="layout-split:col-span-8">
+        {/* KPI 2: Needs attention */}
+        <div className="mod s3">
+          <div className="lab">Needs attention</div>
+          <div className="lcd" style={{ marginTop: "12px" }}>
+            <span className="small">{padNumber(needsAttentionCount)}</span>
+            LOW OR CRITICAL
+          </div>
+        </div>
+
+        {/* KPI 3 & 4: Critical restocks & Household */}
+        <div className="mod s4" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div>
+            <div className="lab">Critical restocks</div>
+            <div className="lcd" style={{ marginTop: "12px" }}>
+              <span className="small">{padNumber(criticalCount)}</span>
+              ≤ 1 DAY
+            </div>
+          </div>
+          <div>
+            <div className="lab">Household</div>
+            <div className="lcd" style={{ marginTop: "12px" }}>
+              <span className="small">{padNumber(familySize || 4)}</span>
+              MEMBERS
+            </div>
+          </div>
+        </div>
+
+        {/* Stock Health Bar */}
+        {healthCounts.total > 0 && (
+          <div className="mod s12">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="lab">Stock health</div>
+              <div className="legend" style={{ margin: 0 }}>
+                <span>
+                  <b>{healthCounts.healthy}</b> healthy
+                </span>
+                <span>
+                  <b>{healthCounts.low}</b> low
+                </span>
+                <span>
+                  <b>{healthCounts.critical}</b> critical
+                </span>
+              </div>
+            </div>
+            <div
+              className="bar"
+              role="img"
+              aria-label={`${healthyPct}% healthy, ${lowPct}% low, ${criticalPct}% critical`}
+            >
+              <span className="g" style={{ width: `${healthyPct}%` }} />
+              <span className="y" style={{ width: `${lowPct}%` }} />
+              <span className="r" style={{ width: `${criticalPct}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* Tracked Inventory */}
+        <div className="mod s8">
           <InventoryTable
             items={predictions}
             statusFilter={statusFilter}
@@ -258,164 +295,118 @@ export default function Dashboard({
           />
         </div>
 
-        {/* Right Sidebar: Previous Scans (Grouped Pairs) & Quick Shopping Preview */}
-        <div className="layout-split:col-span-4 space-y-6">
-          {/* Previous Scans Card */}
-          <div className="glass-panel rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Clock className="h-5 w-5 text-indigo-400" />
-                Previous Scans
-              </h3>
-              <span className="text-xs font-medium text-gray-500">
-                {orderedCycles.length} {orderedCycles.length === 1 ? "cycle" : "cycles"}
-              </span>
-            </div>
+        {/* Restock Queue */}
+        <div className="mod s4">
+          <h2 className="sp-h2">Restock queue</h2>
+          {queueItems.length > 0 ? (
+            <>
+              <div className="q">
+                {queueItems.slice(0, 4).map((item, idx) => (
+                  <Link className="key" to="/shopping-list" key={`${item.name}-${idx}`}>
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+              {Math.max(queueItems.length, pendingShoppingCount) > 4 && (
+                <p className="lab" style={{ marginBottom: "14px" }}>
+                  +{Math.max(queueItems.length, pendingShoppingCount) - 4} more on your shopping list
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="lab" style={{ margin: "18px 0" }}>
+              All tracked items are stocked up!
+            </p>
+          )}
+          <Link className="key pri" to="/shopping-list">
+            Open list →
+          </Link>
+        </div>
 
-            <div className="space-y-3">
-              {visibleCycles.map((cycle) => {
-                const latestFollowUp = cycle.followUps[cycle.followUps.length - 1] || null;
-                const previewImg = latestFollowUp?.imageUrl || cycle.baseline?.imageUrl || null;
-                const hasPair = Boolean(cycle.baseline && cycle.followUps.length > 0);
-                const pairBadge = hasPair
-                  ? cycle.followUps.length > 1
-                    ? `Baseline + ${cycle.followUps.length} Follow-ups`
-                    : "Baseline + Follow-up"
-                  : cycle.baseline
-                  ? "Baseline Only"
-                  : "Follow-up";
-
-                const baseCount = cycle.baseline?.items?.length || 0;
-                const followCount = latestFollowUp?.items?.length || 0;
-                const summaryText = hasPair
-                  ? `${baseCount} → ${followCount} items`
-                  : `${baseCount || followCount} items`;
-
-                return (
-                  <button
-                    key={cycle.id}
-                    onClick={() => setSelectedCycleId(cycle.id)}
-                    className="w-full text-left p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-indigo-500/30 transition flex items-center gap-3.5 group cursor-pointer"
-                  >
-                    {/* Thumbnail Preview */}
-                    {previewImg ? (
-                      <div className="relative h-14 w-14 shrink-0">
-                        <img
-                          src={previewImg}
-                          alt={cycle.title}
-                          className="h-14 w-14 rounded-xl object-cover border border-white/10"
-                        />
-                        {hasPair && cycle.baseline?.imageUrl && latestFollowUp?.imageUrl && (
-                          <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-indigo-600 text-[9px] font-bold text-white shadow">
-                            2x
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="h-14 w-14 rounded-xl bg-gray-800/80 border border-white/5 flex items-center justify-center text-gray-500 shrink-0">
-                        <Camera className="h-5 w-5" />
-                      </div>
-                    )}
-
-                    {/* Cycle Metadata */}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold text-white truncate group-hover:text-indigo-300 transition">
-                          {cycle.title}
-                        </span>
-                        <Eye className="h-3.5 w-3.5 text-gray-500 group-hover:text-indigo-400 shrink-0 transition" />
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
-                          {pairBadge}
-                        </span>
-                        <span className="text-xs text-gray-400">{summaryText}</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {orderedCycles.length > 4 && (
-              <button
-                onClick={() => setShowAllCycles((prev) => !prev)}
-                className="w-full py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition cursor-pointer"
-              >
-                {showAllCycles ? "Show Fewer Cycles" : `View All ${orderedCycles.length} Cycles`}
-              </button>
-            )}
+        {/* Previous Scans Drum Pads */}
+        <div className="mod s12">
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+            <h2 className="sp-h2">Previous scans</h2>
+            <span className="lab">{totalCycles} cycles · tap a pad to inspect</span>
           </div>
 
-          {/* Prompt when only 1 scan exists */}
-          {scans.length < 2 && (
-            <div className="glass-panel rounded-3xl p-5 border-amber-500/20 bg-amber-500/5 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-white">Upload Another Scan</h4>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Add a follow-up scan later to unlock consumption rates and depletion forecasts.
-                </p>
-                <Link to="/scan?type=subsequent" className="inline-block text-xs font-bold text-indigo-400 hover:underline pt-1">
-                  Upload Scan Now →
-                </Link>
-              </div>
+          <div className="pads">
+            {visiblePadCycles.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={selectedCycle?.id === c.id ? "on" : ""}
+                aria-label={`Scan cycle ${c.number}${c.number === totalCycles ? " (latest)" : ""}`}
+                onClick={() => setSelectedCycleId(c.id)}
+              >
+                {c.number}
+              </button>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pager">
+              <button
+                type="button"
+                className="key sm"
+                disabled={padPage <= 1}
+                onClick={() => setPadPage((p) => Math.max(1, p - 1))}
+              >
+                ← Older
+              </button>
+              <span className="lab">
+                {padStart + 1}–{Math.min(totalCycles, padStart + padsPerPage)} of {totalCycles}
+              </span>
+              <button
+                type="button"
+                className="key sm"
+                disabled={padPage >= totalPages}
+                onClick={() => setPadPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Newer →
+              </button>
+              <button
+                type="button"
+                className="key sm"
+                disabled={padPage >= totalPages}
+                onClick={() => {
+                  setPadPage(totalPages);
+                  if (cycles.length > 0) setSelectedCycleId(cycles[cycles.length - 1].id);
+                }}
+              >
+                Latest
+              </button>
             </div>
           )}
 
-          {/* Compact Shopping List Preview */}
-          {scans.length >= 2 && (
-            <div className="glass-panel rounded-3xl p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <ShoppingCart className="h-4.5 w-4.5 text-indigo-400" />
-                  Restock Queue
-                </h3>
-                <Link
-                  to="/shopping-list"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition"
-                >
-                  Open List
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+          {selectedCycle && (
+            <div
+              className="lcd cyc"
+              aria-live="polite"
+              style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px" }}
+            >
+              <div>
+                <b>{selectedCycle.title}</b>
+                <span className="cyc-sub">{renderCycleSummary(selectedCycle)}</span>
               </div>
-
-              {pendingShoppingItems.length > 0 ? (
-                <div className="space-y-2">
-                  {pendingShoppingItems.slice(0, 4).map((item, idx) => (
-                    <div
-                      key={`${item.name}-${idx}`}
-                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs"
-                    >
-                      <span className="font-medium text-gray-200 truncate">{item.name}</span>
-                      <span className="text-rose-400 font-semibold shrink-0 ml-2">
-                        {item.urgency || "Restock"}
-                      </span>
-                    </div>
-                  ))}
-                  {pendingShoppingItems.length > 4 && (
-                    <p className="text-[11px] text-gray-500 text-center pt-1">
-                      +{pendingShoppingItems.length - 4} more items on your shopping list
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400">
-                  Everything is stocked up! No urgent items to buy right now.
-                </p>
-              )}
+              <button
+                type="button"
+                className="key sm pri"
+                onClick={() => setModalCycleId(selectedCycle.id)}
+              >
+                Inspect photos &amp; items
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Side-by-Side Cycle Scan Detail Modal */}
       <ScanDetailModal
-        cycle={selectedCycle}
-        onClose={() => setSelectedCycleId(null)}
+        cycle={modalCycle}
+        onClose={() => setModalCycleId(null)}
         onDeleteScan={onDeleteScan}
         onDeleteScanPair={onDeleteScanPair}
       />
-    </div>
+    </section>
   );
 }
