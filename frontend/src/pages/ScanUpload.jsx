@@ -661,7 +661,7 @@ export default function ScanUpload({
           </div>
 
           {activeCycleTab === "prog" ? (
-            <div style={{ marginTop: "16px" }}>
+            <div className="cycles-scroll" style={{ marginTop: "16px" }}>
               {unfulfilledCycles.length > 0 ? (
                 unfulfilledCycles.map((cycle) => {
                   const b = cycle.baselineScan;
@@ -765,7 +765,7 @@ export default function ScanUpload({
               )}
             </div>
           ) : (
-            <div style={{ marginTop: "16px" }}>
+            <div className="cycles-scroll" style={{ marginTop: "16px" }}>
               {fulfilledCycles.length > 0 ? (
                 fulfilledCycles.map((cycle) => {
                   const b = cycle.baselineScan;

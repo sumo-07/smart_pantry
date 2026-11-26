@@ -320,6 +320,12 @@ body::before {
   overflow-y: auto;
 }
 
+.cycles-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .scroll {
   overflow: auto;
   max-height: 390px;
@@ -327,6 +333,7 @@ body::before {
 
 .scroll::-webkit-scrollbar,
 .sp-scroll-y::-webkit-scrollbar,
+.cycles-scroll::-webkit-scrollbar,
 .log::-webkit-scrollbar,
 .cy-b .lcd::-webkit-scrollbar {
   width: 8px;
@@ -335,6 +342,7 @@ body::before {
 
 .scroll::-webkit-scrollbar-track,
 .sp-scroll-y::-webkit-scrollbar-track,
+.cycles-scroll::-webkit-scrollbar-track,
 .log::-webkit-scrollbar-track,
 .cy-b .lcd::-webkit-scrollbar-track {
   background: var(--off);
@@ -343,6 +351,7 @@ body::before {
 
 .scroll::-webkit-scrollbar-thumb,
 .sp-scroll-y::-webkit-scrollbar-thumb,
+.cycles-scroll::-webkit-scrollbar-thumb,
 .log::-webkit-scrollbar-thumb,
 .cy-b .lcd::-webkit-scrollbar-thumb {
   background: var(--mut);
