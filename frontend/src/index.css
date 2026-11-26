@@ -669,7 +669,7 @@ body::before {
 
 .ir {
   display: grid;
-  grid-template-columns: 16px minmax(110px, 1.6fr) 98px 42px 58px 74px 72px;
+  grid-template-columns: 16px minmax(120px, 1.5fr) 98px 40px minmax(70px, 0.75fr) minmax(88px, 0.9fr) 68px;
   gap: 10px;
   align-items: center;
   padding: 11px 0;
@@ -693,7 +693,8 @@ body::before {
 .ir .d {
   font-family: var(--dot);
   font-weight: 800;
-  font-size: 20px;
+  font-size: 16px;
+  white-space: nowrap;
 }
 
 .dot {
