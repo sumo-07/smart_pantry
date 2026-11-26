@@ -3,7 +3,24 @@ import { Link } from "react-router-dom";
 import InventoryTable from "../components/InventoryTable";
 import ScanDetailModal from "../components/ScanDetailModal";
 
-const PADS_PER_PAGE = 13;
+function useResponsivePadsPerPage() {
+  const getCount = () => {
+    if (typeof window === "undefined") return 13;
+    if (window.innerWidth <= 600) return 10; // 2 clean rows of 5
+    if (window.innerWidth <= 900) return 14; // 2 clean rows of 7
+    return 13; // 1 clean row of 13
+  };
+
+  const [count, setCount] = useState(getCount);
+
+  useEffect(() => {
+    const onResize = () => setCount(getCount());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return count;
+}
 
 function groupScansIntoCycles(scans) {
   const cycles = [];
@@ -62,16 +79,17 @@ export default function Dashboard({
   const [modalCycleId, setModalCycleId] = useState(null);
   const [padPage, setPadPage] = useState(1);
 
+  const padsPerPage = useResponsivePadsPerPage();
   const cycles = useMemo(() => groupScansIntoCycles(scans), [scans]);
   const totalCycles = cycles.length;
-  const totalPages = Math.max(1, Math.ceil(totalCycles / PADS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(totalCycles / padsPerPage));
 
   useEffect(() => {
     if (totalCycles > 0) {
-      setPadPage(Math.ceil(totalCycles / PADS_PER_PAGE));
+      setPadPage(Math.ceil(totalCycles / padsPerPage));
       setSelectedCycleId(cycles[cycles.length - 1].id);
     }
-  }, [totalCycles]);
+  }, [totalCycles, padsPerPage]);
 
   const itemsTrackedCount = predictions.length || scans[scans.length - 1]?.items?.length || 0;
 
@@ -141,8 +159,8 @@ export default function Dashboard({
 
   const needsAttentionCount = healthCounts.low + healthCounts.critical;
   const criticalCount = healthCounts.critical;
-  const padStart = (padPage - 1) * PADS_PER_PAGE;
-  const visiblePadCycles = cycles.slice(padStart, padStart + PADS_PER_PAGE);
+  const padStart = (padPage - 1) * padsPerPage;
+  const visiblePadCycles = cycles.slice(padStart, padStart + padsPerPage);
   const selectedCycle = cycles.find((c) => c.id === selectedCycleId) || cycles[cycles.length - 1];
   const modalCycle = cycles.find((c) => c.id === modalCycleId) || null;
 
@@ -337,7 +355,7 @@ export default function Dashboard({
                 ← Older
               </button>
               <span className="lab">
-                Scans {padStart + 1}–{Math.min(totalCycles, padStart + PADS_PER_PAGE)} of {totalCycles}
+                {padStart + 1}–{Math.min(totalCycles, padStart + padsPerPage)} of {totalCycles}
               </span>
               <button
                 type="button"

@@ -715,16 +715,24 @@ body::before {
 }
 
 .pads button {
-  font: 700 12px var(--dot);
+  font: 700 13px var(--dot);
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  border-radius: 10px;
+  max-height: 54px;
+  width: 100%;
+  border-radius: 12px;
   border: 0;
   cursor: pointer;
   background: var(--panel);
   box-shadow: 0 3px 0 var(--edge), inset 0 1px 0 var(--hl);
   color: var(--mut);
+  transition: transform .08s, box-shadow .08s;
+}
+
+.pads button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--edge);
 }
 
 .pads button.on {
