@@ -16,6 +16,8 @@ Smart Pantry AI is a modern SaaS web application for tracking pantry, refrigerat
   - `days_left = current_quantity / daily_rate`
   - Classifies stock as **Healthy**, **Low** (≤ 3 days), or **Critical** (≤ 1 day or out of stock).
 - **Smart Shopping List & Export**: Automatically queues Low/Critical items, supports custom items, and provides **Copy List** (clipboard) and **Export CSV** actions.
+- **Authentication & Signup Validation**: Supports Firebase Email/Password and Google Sign-In, with email trimming/regex validation, an 8+ character password complexity checklist (uppercase, lowercase, number/symbol), live password strength & match indicators, and friendly Firebase error mapping.
+- **Responsive Tactile UI & Themes**: MODEL 01 tactile hardware interface with Light/Dark theme support, desktop table + mobile card inventory views, `/favicon` icon assets, and Netlify SPA routing (`_redirects`).
 - **Demo & Fallback Support**: Automatically falls back to `localStorage` if Firebase credentials aren't configured, and simulated vision analysis if `GEMINI_API_KEY` is omitted.
 
 ---
@@ -45,10 +47,14 @@ backend/
 └── tests/                       # Isolated unit tests (`npm test`) & manual diagnostic scripts
 
 frontend/
+├── public/
+│   ├── _redirects               # Netlify SPA fallback routing
+│   └── favicon/                 # Site icons (favicon.ico, favicon.svg, 180px & 512px PNGs)
 └── src/
     ├── components/              # Reusable UI components & modals (InventoryTable, ScanDetailModal, etc.)
     ├── context/                 # AuthContext
-    ├── pages/                   # Route views (Dashboard, ScanUpload, ShoppingList, Insights)
+    ├── firebase.js              # Firebase client SDK initialization & Google provider
+    ├── pages/                   # Route views (LandingPage, Login, Register, Dashboard, ScanUpload, ShoppingList, Insights)
     └── utils/                   # 1920px image compression, thumbnail generator & item normalizer
 ```
 
@@ -63,13 +69,10 @@ frontend/
 PORT=5000
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Firebase configuration
-VITE_FIREBASE_API_KEY=your_firebase_api_key_here
-VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain_here
+# Firebase Admin / Firestore configuration
 VITE_FIREBASE_PROJECT_ID=your_firebase_project_id_here
-VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket_here
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id_here
-VITE_FIREBASE_APP_ID=your_firebase_app_id_here
+FIREBASE_SERVICE_ACCOUNT=        # Optional inline JSON string for Firebase service account
+FIREBASE_SERVICE_ACCOUNT_PATH=   # Optional path to Firebase service account JSON file
 ```
 
 #### Frontend (`frontend/.env`)
@@ -102,12 +105,13 @@ npm run dev
 ```
 Runs at `http://localhost:5173`.
 
-### 3. Run Tests & Builds
+### 3. Run Tests, Lint & Builds
 ```bash
 # Backend unit tests
 cd backend && npm test
 
-# Frontend production build
+# Frontend lint & production build
+cd frontend && npm run lint
 cd frontend && npm run build
 ```
 
