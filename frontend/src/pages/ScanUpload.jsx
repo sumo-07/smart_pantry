@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { compressImage } from "../utils/compressImage";
 import { areItemsIdentical } from "../utils/itemNormalizer";
 import NumberStepper from "../components/NumberStepper";
@@ -43,6 +44,26 @@ export default function ScanUpload({
   const [armedDeleteId, setArmedDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [selectedBaselineId, setSelectedBaselineId] = useState("");
+  const [baselineMenuOpen, setBaselineMenuOpen] = useState(false);
+  const baselineMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!baselineMenuOpen) return;
+    const onOutside = (e) => {
+      if (baselineMenuRef.current && !baselineMenuRef.current.contains(e.target)) {
+        setBaselineMenuOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setBaselineMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [baselineMenuOpen]);
 
   const cycles = useMemo(() => {
     const sorted = [...scans].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -74,6 +95,10 @@ export default function ScanUpload({
 
   const unfulfilledCycles = useMemo(() => cycles.filter((c) => !c.isFulfilled).reverse(), [cycles]);
   const fulfilledCycles = useMemo(() => cycles.filter((c) => c.isFulfilled).reverse(), [cycles]);
+  const activeBaselineCycle = useMemo(
+    () => unfulfilledCycles.find((c) => c.id === selectedBaselineId) || unfulfilledCycles[0] || null,
+    [unfulfilledCycles, selectedBaselineId]
+  );
 
   const [scanType, setScanType] = useState(() =>
     requestedType === "subsequent" && unfulfilledCycles.length > 0 ? "subsequent" : "baseline"
@@ -356,9 +381,18 @@ export default function ScanUpload({
                 {isScanning ? "..." : "SCAN"}
               </button>
               <span className="lab">
-                {scanType === "subsequent" && (selectedBaselineId || unfulfilledCycles[0])
-                  ? `Follow-up mode · pairing with Baseline`
-                  : "Fresh baseline mode · starts a new cycle"}
+                {scanType === "subsequent" && activeBaselineCycle ? (
+                  <>
+                    Pairing with{" "}
+                    <b style={{ color: "var(--ink)" }}>
+                      Baseline #{activeBaselineCycle.number}
+                    </b>{" "}
+                    ({formatTimestamp(activeBaselineCycle.baselineScan.timestamp)} ·{" "}
+                    {(activeBaselineCycle.baselineScan.items || []).length} items)
+                  </>
+                ) : (
+                  "Fresh baseline mode · starts a new cycle"
+                )}
                 <br />
                 {errorMsg ? (
                   <span style={{ color: "var(--r)" }}>{errorMsg}</span>
@@ -371,11 +405,14 @@ export default function ScanUpload({
             </div>
 
             {unfulfilledCycles.length > 0 && (
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                 <button
                   type="button"
                   className={`key sm${scanType === "baseline" ? " on" : ""}`}
-                  onClick={() => setScanType("baseline")}
+                  onClick={() => {
+                    setScanType("baseline");
+                    setBaselineMenuOpen(false);
+                  }}
                 >
                   New baseline
                 </button>
@@ -386,6 +423,67 @@ export default function ScanUpload({
                 >
                   Follow-up
                 </button>
+
+                {scanType === "subsequent" && unfulfilledCycles.length > 1 && activeBaselineCycle && (
+                  <div ref={baselineMenuRef} style={{ position: "relative" }}>
+                    <button
+                      type="button"
+                      className="key sm"
+                      onClick={() => setBaselineMenuOpen((o) => !o)}
+                      aria-expanded={baselineMenuOpen}
+                      aria-haspopup="listbox"
+                      aria-label="Select target baseline"
+                    >
+                      <span>Baseline #{activeBaselineCycle.number}</span>
+                      <ChevronDown
+                        size={14}
+                        style={{
+                          transform: baselineMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform .15s"
+                        }}
+                      />
+                    </button>
+
+                    {baselineMenuOpen && (
+                      <div
+                        className="mod"
+                        role="listbox"
+                        aria-label="In-progress baselines"
+                        style={{
+                          position: "absolute",
+                          right: 0,
+                          top: "calc(100% + 8px)",
+                          zIndex: 20,
+                          padding: "10px",
+                          minWidth: "240px",
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          display: "grid",
+                          gap: "6px",
+                          borderRadius: "16px"
+                        }}
+                      >
+                        {unfulfilledCycles.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            role="option"
+                            aria-selected={c.id === activeBaselineCycle.id}
+                            className={`key sm${c.id === activeBaselineCycle.id ? " on" : ""}`}
+                            onClick={() => {
+                              setSelectedBaselineId(c.id);
+                              setBaselineMenuOpen(false);
+                            }}
+                            style={{ width: "100%", justifyContent: "space-between" }}
+                          >
+                            <span>#{c.number} · {formatTimestamp(c.baselineScan.timestamp)}</span>
+                            <span>{(c.baselineScan.items || []).length}i</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
