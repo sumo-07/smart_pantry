@@ -1232,6 +1232,8 @@ body::before {
   .hero { grid-template-columns: 1fr; min-height: auto; padding: 3vh 0 4vh; }
   .s5, .s3, .s4, .s6, .s7, .s8 { grid-column: span 12; }
   .pads { grid-template-columns: repeat(7, 1fr); }
+  .vf { max-height: 230px; }
+  .s7 .scan { width: 76px; height: 76px; font-size: 16px; }
 }
 
 @media (max-width: 720px) {
@@ -1278,6 +1280,9 @@ body::before {
   .leds { gap: 3px; margin-top: 8px; }
   .leds i { width: 7px; height: 14px; }
   .scan { width: 84px; height: 84px; font-size: 17px; }
+  .vf { max-height: 190px; }
+  .vf .c { width: 24px; height: 24px; }
+  .vf .msg { font-size: 18px; }
   .pads { grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .bl-h { flex-wrap: wrap; padding: 14px; }
   .bl-h .meta { align-items: flex-start; text-align: left; }
