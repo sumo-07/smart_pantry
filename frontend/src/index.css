@@ -1184,7 +1184,7 @@ body::before {
 
 .cy {
   border-top: 2px solid var(--off);
-  padding: 14px 0;
+  padding: 14px 12px;
 }
 
 .cy:first-child {
